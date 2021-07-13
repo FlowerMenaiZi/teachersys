@@ -1,0 +1,491 @@
+<template>
+  <a-table :columns="columns" :data-source="data" :pagination="pagination"
+           :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
+    <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
+      <div style="padding: 8px">
+        <a-input
+                ref="searchInput"
+                :placeholder="`查询${column.title}`"
+                :value="selectedKeys[0]"
+                style="width: 188px; margin-bottom: 8px; display: block"
+                @change="e => setSelectedKeys(e.target.value ? [e.target.value] : [])"
+                @pressEnter="handleSearch(selectedKeys, confirm, column.dataIndex)"
+        />
+        <a-button
+                type="primary"
+                size="small"
+                style="width: 90px; margin-right: 8px"
+                @click="handleSearch(selectedKeys, confirm, column.dataIndex)"
+        >
+          <template #icon>
+            <SearchOutlined/>
+          </template>
+          搜索
+        </a-button>
+        <a-button size="small" style="width: 90px" @click="handleReset(clearFilters)">
+          重置
+        </a-button>
+      </div>
+    </template>
+    <template #operation="{ record }">
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleSee(record.key)">查看
+      </a-button>
+      <a-modal v-model:visible="record.isShow" title="查看教案测评记录项" @ok="handleOk()" okText="确认" cancelText="取消"
+               width="90%">
+        <a-table :columns="columns2" :data-source="itemData" :scroll="{ x: 1200, y: 300 }"
+                 :pagination="pagination" :rowKey="itemData.key">
+          <template #operation="{ record }">
+            <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.key)">
+              修改
+            </a-button>
+            <a-popconfirm
+                    title="是否要删除？"
+                    ok-text="是"
+                    cancel-text="否"
+                    @confirm="itemConfirm(record.key)"
+            >
+              <a-button type="danger">删除</a-button>
+            </a-popconfirm>
+          </template>
+        </a-table>
+      </a-modal>
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleExport(record.key)">导出
+      </a-button>
+      <a-popconfirm
+              title="是否要删除？"
+              ok-text="是"
+              cancel-text="否"
+              @confirm="confirm(record.key)"
+      >
+        <a-button type="danger">删除</a-button>
+      </a-popconfirm>
+    </template>
+  </a-table>
+
+  <a-modal v-model:visible="showModify" title="修改教案测评记录项" @ok="handleModifyOk()" okText="确认" cancelText="取消"
+           width="40%">
+    <label>教案上传（审批）情况（10%）:</label>
+    <a-input-number placeholder="教案上传（审批）情况（10%）" style="width:100%;margin-bottom: 10px;"
+                    v-model:value="uploadScore" :max="10" :min="0"></a-input-number>
+    <label>教案格式规范性（10%）:</label>
+    <a-input-number placeholder="请输入教案格式规范性（10%）" style="width:100%;margin-bottom: 10px;"
+                    v-model:value="formatScore" :max="10" :min="0"></a-input-number>
+    <label>教学内容完整性（40%）:</label>
+    <a-input-number placeholder="请输入教学内容完整性（40%）" style="width:100%;margin-bottom: 10px;"
+                    v-model:value="completeScore" :max="40" :min="0"></a-input-number>
+    <label>教学设计科学性（40%）:</label>
+    <a-input-number placeholder="请输入教学设计科学性（40%）" style="width:100%;margin-bottom: 10px;"
+                    v-model:value="designScore" :max="40" :min="0"></a-input-number>
+    <a-input-group compact>
+      <label>合计:</label><br>
+      <a-input-number placeholder="请输入合计" style="width:75%;margin-bottom: 10px;"
+                      v-model:value="totalScore" :max="100" :min="0"></a-input-number>
+      <a-button style="width:25%;margin-bottom: 10px" @click="calcTotalScore">
+        计算总得分
+      </a-button>
+    </a-input-group>
+  </a-modal>
+
+  <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleAdd">新增
+    <a-modal v-model:visible="visibleTwo" title="新增授课计划情况表" @ok="handleAddOk" okText="确认" cancelText="取消">
+      <label>教研室</label>
+      <a-select style="width: 100%;margin-bottom: 4px" @change="handleModifySelect"
+                v-model:value="curSelValue">
+        <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.name">
+          {{ item.name }}
+        </a-select-option>
+      </a-select>
+    </a-modal>
+  </a-button>
+</template>
+
+<script lang="ts">
+  import {defineComponent, reactive, ref, Ref} from 'vue';
+  import {message} from 'ant-design-vue';
+  import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue';
+
+  //设置接收数据的接口
+  interface TableDataType {
+    key: string;
+    date: string;
+    term: string;
+    teachingSection: string;
+    examiner: string;
+    isShow?: boolean;
+  }
+
+  export default defineComponent({
+    name: "teachingPlanEvaluation",
+    components: {
+      SearchOutlined,
+      CheckOutlined,
+      EditOutlined,
+    },
+    setup() {
+      //搜索框
+      const searchInput = ref()
+      //分页数
+      const pagination = {
+        pageSize: 5
+      }
+      //模拟数据，使用TableDataType接口验证数据
+      const data: Ref<TableDataType[]> = ref([
+        {
+          key: '1',
+          date: "2021-07-05",
+          term: '2020-2021学年度 第2学期',
+          teachingSection: '网络教研室',
+          examiner: '',
+          isShow: false,
+        },
+        {
+          key: '2',
+          date: "2021-07-06",
+          term: '2020-2021学年度 第2学期',
+          teachingSection: '系办教研室',
+          examiner: '',
+        }
+      ])
+      const itemData = ref([
+        {
+          key: '',
+          teacherName: '',
+          courseName: '',
+          uploadScore: '',
+          formatScore: '',
+          completeScore: '',
+          designScore: '',
+          totalScore: ''
+        },
+      ])
+      //教研室
+      const sectionData = ref([
+        {
+          id: '1',
+          name: '系办教研室'
+        },
+        {
+          id: '2',
+          name: '网络教研室'
+        },
+        {
+          id: '3',
+          name: '商务教研室'
+        },
+        {
+          id: '4',
+          name: '会计教研室'
+        },
+        {
+          id: '5',
+          name: '灯饰教研室'
+        },
+        {
+          id: '6',
+          name: '环艺教研室'
+        },
+        {
+          id: '7',
+          name: '专业基础教研室'
+        },
+        {
+          id: '8',
+          name: '美容教研室'
+        },
+        {
+          id: '9',
+          name: '行政部门教研室'
+        },
+      ])
+      //搜索框状态
+      const state = reactive({
+        searchText: '',
+        searchedColumn: '',
+      })
+      //设置表头及字段排序或字段搜索
+      const columns = [
+        {
+          title: '日期',
+          dataIndex: 'date',
+          defaultSortOrder: 'false',
+          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.date) - Date.parse(b.date),
+        },
+        {
+          title: '学期',
+          dataIndex: 'term',
+          slots: {
+            filterDropdown: 'filterDropdown',
+            filterIcon: 'filterIcon',
+            customRender: 'customRender',
+          },
+          onFilter: (value: string, record: TableDataType) =>
+              record.term.toString().toLowerCase().includes(value.toLowerCase()),
+          onFilterDropdownVisibleChange: (visible: any) => {
+            if (visible) {
+              setTimeout(() => {
+                searchInput.value.focus();
+              }, 0);
+            }
+          },
+        },
+        {
+          title: '教研室',
+          dataIndex: 'teachingSection',
+          slots: {
+            filterDropdown: 'filterDropdown',
+            filterIcon: 'filterIcon',
+            customRender: 'customRender',
+          },
+          onFilter: (value: string, record: TableDataType) =>
+              record.teachingSection.toString().toLowerCase().includes(value.toLowerCase()),
+          onFilterDropdownVisibleChange: (visible: any) => {
+            if (visible) {
+              setTimeout(() => {
+                searchInput.value.focus();
+              }, 0);
+            }
+          },
+        },
+        {
+          title: '检查人',
+          dataIndex: 'examiner',
+          slots: {
+            filterDropdown: 'filterDropdown',
+            filterIcon: 'filterIcon',
+            customRender: 'customRender',
+          },
+          onFilter: (value: string, record: TableDataType) =>
+              record.examiner.toString().toLowerCase().includes(value.toLowerCase()),
+          onFilterDropdownVisibleChange: (visible: any) => {
+            if (visible) {
+              setTimeout(() => {
+                searchInput.value.focus();
+              }, 0);
+            }
+          },
+        },
+        {
+          title: '操作',
+          dataIndex: 'operation',
+          slots: {customRender: 'operation'},
+        },
+      ]
+      const columns2 = [
+        {title: '教师姓名', width: 100, dataIndex: 'teacherName', key: 'teacherName', fixed: 'left', align: 'center'},
+        {title: '课程', dataIndex: 'courseName', key: 'courseName', width: 100, fixed: 'left', align: 'center'},
+        {title: '教案上传（审批）情况（10%）', dataIndex: 'uploadScore', key: 'uploadScore', width: 180, align: 'center'},
+        {title: '教案格式规范性（10%）', dataIndex: 'formatScore', key: 'teachingPlanFormat', width: 180, align: 'center'},
+        {title: '教学内容完整性（40%）', dataIndex: 'completeScore', key: 'completeScore', width: 180, align: 'center'},
+        {title: '教学设计科学性（40%）', dataIndex: 'designScore', key: 'designScore', width: 180, align: 'center'},
+        {title: '合计', dataIndex: 'totalScore', key: 'totalScore', width: 120, align: 'center'},
+        {
+          title: '操作',
+          dataIndex: 'operation',
+          key: 'operation',
+          fixed: 'right',
+          width: 120,
+          slots: {customRender: 'operation'},
+        },
+      ]
+      //处理搜索结果
+      const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any) => {
+        confirm()
+        state.searchText = selectedKeys[0]
+        state.searchedColumn = dataIndex
+      };
+      //处理重置事件，清除搜索的内容
+      const handleReset = (clearFilters: any) => {
+        clearFilters()
+        state.searchText = ''
+      }
+      //设置当前点击的key值为空
+      const _key = ref()
+      const curSelValue = ref('')
+      const showModify = ref(false)
+      const handleSee = (key: string) => {
+        itemData.value.splice(0, itemData.value.length)
+        for (let i in data.value) {
+          if (data.value[i].key === data.value[0].key) data.value[i].isShow = true
+        }
+
+        //在这进行数据请求///////////////////////////////////////////////////////////
+        if (key === '1') {
+          const getData = [
+            {
+              key: '1',
+              teacherName: '郑镇耿',
+              courseName: 'LINUX服务器管理(下)',
+              uploadScore: '',
+              formatScore: '',
+              completeScore: '',
+              designScore: '',
+              totalScore: ''
+            }
+          ]
+          itemData.value = getData
+        } else {
+          const getData2 = [
+            {
+              key: '1',
+              teacherName: '郑镇耿',
+              courseName: 'LINUX服务器管理(下)',
+              uploadScore: '',
+              formatScore: '',
+              completeScore: '',
+              designScore: '',
+              totalScore: ''
+            }
+          ]
+          itemData.value = getData2
+        }
+      }
+      //处理修改函数，传入key值
+      const uploadScore = ref('')
+      const formatScore = ref('')
+      const completeScore = ref('')
+      const designScore = ref('')
+      const totalScore = ref('')
+      const handleModify = (key: string) => {
+        showModify.value = true
+        _key.value = key
+        //显示弹出层
+        for (let i = 0; i < itemData.value.length; i++) {
+          if (itemData.value[i].key === _key.value) {
+            uploadScore.value = itemData.value[i].uploadScore
+            formatScore.value = itemData.value[i].formatScore
+            completeScore.value = itemData.value[i].completeScore
+            designScore.value = itemData.value[i].designScore
+            totalScore.value = itemData.value[i].totalScore
+          }
+        }
+      }
+      const calcTotalScore = () => {
+        totalScore.value = uploadScore.value + formatScore.value + completeScore.value + designScore.value
+      }
+      const handleModifyOk = () => {
+        //在这进行数据修改上传数据库//////////////////////////////////////////////
+        for (let i = 0; i < itemData.value.length; i++) {
+          if (itemData.value[i].key === _key.value) {
+            itemData.value[i].uploadScore = uploadScore.value
+            itemData.value[i].formatScore = formatScore.value
+            itemData.value[i].completeScore = completeScore.value
+            itemData.value[i].designScore = designScore.value
+            itemData.value[i].totalScore = totalScore.value
+          }
+        }
+        showModify.value = false
+        message.success('修改成功')
+      }
+
+      const itemConfirm = (key: string) => {
+        itemData.value = itemData.value.filter(item => item.key != key)
+      }
+      const handleExport = (key: string) => {
+
+      }
+      //获取选择的教研室
+      const selDepartment = ref('')
+      const handleModifySelect = (value: string) => {
+        selDepartment.value = value
+      };
+      //处理弹出层点击ok
+      const handleOk = () => {
+        for (let i in data.value) {
+          data.value[0].isShow = false
+        }
+      };
+      //确认删除
+      const confirm = (key: string) => {
+        data.value = data.value.filter(item => item.key !== key)
+        message.success('删除成功');
+      };
+      //第二个弹出层默认为否
+      const visibleTwo = ref(false);
+
+      //处理点击添加事件
+      const handleAdd = () => {
+        visibleTwo.value = true;
+        curSelValue.value = ''
+      }
+
+      //处理添加弹出层的确认事件
+      const handleAddOk = () => {
+        if (curSelValue.value === '') {
+          message.error('请选择教研室')
+          return false
+        }
+        const isTeachingSec = ref(false)
+        for (let i = 0; i < data.value.length; i++) {
+          if (data.value[i].teachingSection === curSelValue.value) {
+            isTeachingSec.value = true
+          }
+        }
+        if (isTeachingSec.value) {
+          message.error('该教研室已存在')
+          return false
+        }
+        //模拟添加/////////////////////////////////////////////////////
+        let now = new Date();
+        let year = now.getFullYear();
+        let month = now.getMonth() + 1;
+        let day = now.getDate();
+        let clock = year + "-";
+        if (month < 10)
+          clock += "0";
+        clock += month + "-";
+        if (day < 10)
+          clock += "0";
+        clock += day + " ";
+        const newHCheck = {
+          key: Date.now().toString(),
+          date: clock.toString(),
+          term: '2020-2021学年度 第2学期',
+          teachingSection: curSelValue.value,
+          examiner: '',
+        }
+        //向源数据追加
+        data.value.push(newHCheck)
+        message.success('添加成功')
+        curSelValue.value = ''
+        visibleTwo.value = false;
+
+      }
+      return {
+        data,
+        columns,
+        handleSearch,
+        handleReset,
+        pagination,
+        searchInput,
+        handleModify,
+        confirm,
+        handleOk,
+        handleAdd,
+        handleAddOk,
+        visibleTwo,
+        handleModifySelect,
+        curSelValue,
+        handleExport,
+        sectionData,
+        handleSee,
+        columns2,
+        itemData,
+        showModify,
+        uploadScore,
+        formatScore,
+        completeScore,
+        designScore,
+        totalScore,
+        handleModifyOk,
+        itemConfirm,
+        calcTotalScore
+      };
+    },
+  });
+</script>
+
+<style>
+  .ant-modal-mask {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+</style>
