@@ -148,7 +148,7 @@
       ContactsOutlined,
     },
     setup() {
-      const whatEnd = ref('老师端')
+      const whatEnd = ref('管理员端')
       const name = ref('刘杨')
       let isShowScroll = ref(true)
       const breakPoint = () => {

@@ -105,29 +105,17 @@ const routes: Array<RouteRecordRaw> = [
       },
     ]
   },
-  // {
-  //   path: '/staffleader/evenStudyCheck',
-  //   redirect: '/staffleader/evenStudyCheck'
-  // },
-  // {
-  //   path: '/staffleader',
-  //   name: 'staffleader',
-  //   component: () => import('../views/teacher/staffleader/staffleader.vue'),
-  //   children:[
-  //     {
-  //       path: 'evenStudyCheck',
-  //       component: () => import('../views/teacher/staffleader/evenStudyCheck.vue')
-  //     },
-      // {
-      //   path: 'teachingPlanCheck',
-      //   component: () => import('../views/teacher/teachingPlanCheck.vue')
-      // },
-      // {
-      //   path: 'homeworkCheck',
-      //   component: () => import('../views/teacher/homeworkCheck.vue')
-      // },
-    // ]
-  // },
+  {
+    path: '/clazz',
+    name: 'clazz',
+    component: () => import('../views/clazz/clazz.vue'),
+    children:[
+      {
+        path: 'evenStudyCheck',
+        component: () => import('../views/clazz/evenStudyCheck.vue')
+      },
+    ]
+  },
 ]
 
 const router = createRouter({

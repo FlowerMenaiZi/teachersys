@@ -12,7 +12,7 @@
           <a-input-password v-model:value="password" placeholder="请输入密码"/>
         </label>
         <label>
-          <a-button type="primary">提交</a-button>
+          <a-button type="primary" @click="login">提交</a-button>
         </label>
       </div>
     </div>
@@ -21,15 +21,30 @@
 
 <script lang="ts">
 import {defineComponent, ref} from 'vue'
+import {message} from "ant-design-vue";
 
 export default defineComponent({
   name: "login",
   setup() {
     const username = ref<string>()
     const password = ref<string>()
+    const login = () =>{
+      if (username.value === ''){
+        message.error('请输入用户名')
+        return false
+      }
+      if (password.value === ''){
+        message.error('请输入密码')
+        return false
+      }
+      /*进行传输验证返回的权限根据路由守卫去访问，并形成用户信息存储到vuex中*/
+
+
+    }
     return {
       username,
-      password
+      password,
+      login,
     }
   }
 })

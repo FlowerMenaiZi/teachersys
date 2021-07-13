@@ -38,7 +38,7 @@
               title="是否要删除？"
               ok-text="是"
               cancel-text="否"
-              @confirm="confirmDel(record.tpcId)"
+              @confirm="handleConfirmDel(record.tpcId)"
       >
         <a-button type="danger">删除</a-button>
       </a-popconfirm>
@@ -78,6 +78,14 @@
     <a-input placeholder="请输入原因分析" style="margin-bottom: 10px;"
              v-model:value="causeAnalysis"></a-input>
   </a-modal>
+  <a-popconfirm
+      title="是否要新增？"
+      ok-text="确定"
+      cancel-text="取消"
+      @confirm="handleConfirmInsert()"
+  >
+    <a-button type="primary">新增</a-button>
+  </a-popconfirm>
 </template>
 
 <script lang="ts">
@@ -169,13 +177,16 @@
           slots: {customRender: 'operation'},
         },
       ];
+      //弹出按钮
       const handleExport = (id:number) =>{
 
       }
+      //确认按钮
       const handleConfirmTime = (id:number) =>{
 
       }
-      const confirmDel = (id:number) => {
+      //删除按钮
+      const handleConfirmDel = (id:number) => {
 
       }
 
@@ -253,6 +264,11 @@
         showModifyItem.value = false
       }
 
+      /*新增*/
+      const handleConfirmInsert = () =>{
+        //  进行新增操作
+      }
+
       return {
         data,
         columns,
@@ -260,21 +276,24 @@
         searchInput,
         handleExport,
         handleConfirmTime,
-        confirmDel,
+        handleConfirmDel,
 
         columns2,
         showModify,
         itemData,
         handleSee,
         handleSeeOk,
-        handleModify,
+        itemConfirmDel,
 
         showModifyItem,
         schedule,
         actualProgress,
         comparison,
         causeAnalysis,
-        handleModifyOk
+        handleModify,
+        handleModifyOk,
+
+        handleConfirmInsert,
 
       }
     }

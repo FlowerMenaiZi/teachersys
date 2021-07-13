@@ -110,7 +110,7 @@
     <label>评价：</label>
     <a-input placeholder="请输入评价" style="width:100%;margin-bottom: 10px" v-model:value="evaluate"></a-input>
     <label>值班老师确认:</label><br/>
-    <a-checkbox v-model:checked="isChecked" :disabled="isConfirm">确认</a-checkbox>
+    <a-checkbox v-model:checked="isChecked" :disabled="isChecked?true:false">确认</a-checkbox>
   </a-modal>
   <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleAdd">新增
     <a-modal v-model:visible="visibleTwo" title="新增晚修检查表" @ok="handleAddOk" okText="确认" cancelText="取消">
@@ -359,7 +359,6 @@
       }
 
       const isChecked = ref(true)
-      const isConfirm = ref(true)
       const handleModifyOk = () => {
         for (let i in itemData.value) {
           if (itemData.value[i].evenStudyCheckId === eSCId.value) {
@@ -519,7 +518,6 @@
         calcTotalScore,
         handleSeeOk,
         showSetItem,
-        isConfirm,
         isChecked,
         handleAdd,
         visibleTwo,
