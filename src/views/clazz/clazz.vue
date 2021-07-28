@@ -1,7 +1,7 @@
 <template>
   <div id="header">
     <p>{{whatEnd}} ({{name}})</p>
-    <span>注销</span>
+    <span @click="logout">注销</span>
   </div>
   <a-layout>
     <a-layout-sider
@@ -30,9 +30,11 @@
   </a-layout>
 </template>
 
-<script>
-import {defineComponent,ref} from 'vue'
+<script lang="ts">
+import {defineComponent,ref,getCurrentInstance} from 'vue'
 import { PieChartOutlined } from '@ant-design/icons-vue';
+import $store from "../../store/index"
+import { useRouter } from 'vue-router'
 
 export default defineComponent({
   name: "clazz",
@@ -41,11 +43,31 @@ export default defineComponent({
   },
   setup() {
     const whatEnd = ref('班级端')
-    const name = ref('183计网502班')
-    return {
-      whatEnd,
-      name
+    const name = ref('')
+    name.value = $store.state.userInfo.user
+    let isShowScroll = ref(true)
+    const breakPoint = () => {
+      if (window.innerWidth > 992) {
+        isShowScroll.value = true
+      } else {
+        isShowScroll.value = false
+      }
     }
+    const router = useRouter()
+    const {proxy}:any = getCurrentInstance()
+    const logout = () =>{
+      localStorage.removeItem('store');
+      proxy.$cookie.clearCookie('user');
+      $store.replaceState(Object.assign({}, $store.state, null))
+      router.push('/login');
+    }
+    return {
+      breakPoint,
+      isShowScroll,
+      whatEnd,
+      name,
+      logout
+    };
   }
 })
 </script>

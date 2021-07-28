@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination">
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
         <a-input
@@ -27,12 +27,7 @@
       </div>
     </template>
     <template #operation="{ record }">
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleModify(record.key)">修改
-        <a-modal v-model:visible="record.isShow" title="修改" @ok="handleOk()" okText="确认" cancelText="取消">
-          <label>系名</label>
-          <a-input placeholder="请输入系名" v-model:value="curValue" ref="modifyValue"></a-input>
-        </a-modal>
-      </a-button>
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleModify(record.key)">修改</a-button>
       <a-popconfirm
           title="是否要删除？"
           ok-text="是"
@@ -43,6 +38,10 @@
       </a-popconfirm>
     </template>
   </a-table>
+  <a-modal v-model:visible="showModifyM" title="修改" @ok="handleOk()" okText="确认" cancelText="取消">
+    <label>系名</label>
+    <a-input placeholder="请输入系名" v-model:value="curValue" ref="modifyValue"></a-input>
+  </a-modal>
   <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleAdd">添加
     <a-modal v-model:visible="visibleTwo" title="添加" @ok="handleAddOk" okText="确认" cancelText="取消">
       <label>系名</label>
@@ -51,7 +50,7 @@
   </a-button>
 </template>
 <script lang="ts">
-import {defineComponent, ref, reactive, UnwrapRef, Ref} from 'vue';
+import {defineComponent, ref, reactive, UnwrapRef, Ref,getCurrentInstance,onMounted} from 'vue';
 import {message} from 'ant-design-vue';
 import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue';
 
@@ -59,8 +58,7 @@ import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue
 interface TableDataType {
   key: string;
   id: number;
-  department: string;
-  isShow?:boolean;
+  name: string;
 }
 
 export default defineComponent({
@@ -77,30 +75,28 @@ export default defineComponent({
     const pagination = {
       pageSize: 5
     };
+    //获取接口数据
+    let sData:any = ref([]);
+    const {proxy}: any = getCurrentInstance();
+    onMounted(()=>{
+      proxy.$api.get(
+          "/getDepartment",
+          {},
+          {},
+          (success:any)=>{
+            for (let i in success.data.data){
+              let id = success.data.data[i].id
+              success.data.data[i].key=id.toString()
+              sData.value.push(success.data.data[i])
+            }
+          },
+          (error:any)=>{
+            console.log(error);
+          }
+      )
+    })
     //模拟数据，使用TableDataType接口验证数据
-    const data: Ref<TableDataType[]> = ref([
-      {
-        key: '1',
-        id: 1,
-        department: '机械系',
-        isShow:false
-      },
-      {
-        key: '2',
-        id: 2,
-        department: '电气应用系',
-      },
-      {
-        key: '3',
-        id: 3,
-        department: '计算机应用系',
-      },
-      {
-        key: '4',
-        id: 4,
-        department: '汽车系',
-      },
-    ]);
+
     //添加系输入框的placeholder
     const departmentNameTips = ref("请输入系名")
     //搜索框状态
@@ -118,14 +114,14 @@ export default defineComponent({
       },
       {
         title: '系名',
-        dataIndex: 'department',
+        dataIndex: 'name',
         slots: {
           filterDropdown: 'filterDropdown',
           filterIcon: 'filterIcon',
           customRender: 'customRender',
         },
         onFilter: (value: string, record: TableDataType) =>
-            record.department.toString().toLowerCase().includes(value.toLowerCase()),
+            record.name.toString().toLowerCase().includes(value.toLowerCase()),
         onFilterDropdownVisibleChange: (visible: any) => {
           if (visible) {
             setTimeout(() => {
@@ -155,33 +151,72 @@ export default defineComponent({
     const curValue = ref()
     //设置当前点击的key值为空
     const _key = ref()
+    const showModifyM = ref(false)
 
     //处理修改函数，传入key值
     const handleModify = (key: string) => {
       _key.value = key
       //显示弹出层
-      for (let i of data.value) {
+      for (let i of sData.value) {
         if (i.key === _key.value) {
           //设置弹出层input显示的值
-          curValue.value = i.department
+          curValue.value = i.name
         }
-        if (i.key === data.value[0].key) i.isShow = true
+        showModifyM.value = true
       }
     }
     //处理弹出层点击ok
     const handleOk = () => {
-      for (let i in data.value) {
-        if (data.value[i].key === _key.value) {
-          //修改源数据对应的值
-          data.value[i].department = curValue.value
+      if (curValue.value === ''){
+        message.error('系不得为空!')
+        return false
+      }else{
+        for (let i in sData.value) {
+          if (sData.value[i].name === curValue.value) {
+            message.error('该系已存在')
+            return false
+          }
         }
-        data.value[0].isShow = false
+        proxy.$api.get(
+            '/updDepartment',
+            {},
+            {"departId":parseInt(_key.value),"departName":curValue.value},
+            (success)=>{
+              sData.value.splice(0,sData.value.length)
+              for (let i in success.data.data){
+                let id = success.data.data[i].id
+                success.data.data[i].key=id.toString()
+                sData.value.push(success.data.data[i])
+              }
+              message.success('修改成功')
+            },
+            (error)=>{
+
+            }
+        )
       }
+      showModifyM.value = false
     };
     //确认删除
     const confirm = (key: string) => {
-      data.value = data.value.filter(item => item.key !== key)
-      message.success('删除成功');
+
+      proxy.$api.get(
+          '/delDepartment',
+          {},
+          {"departId":parseInt(key)},
+          (success)=>{
+            sData.value.splice(0,sData.value.length)
+            for (let i in success.data.data){
+              let id = success.data.data[i].id
+              success.data.data[i].key=id.toString()
+              sData.value.push(success.data.data[i])
+            }
+            message.success('删除成功')
+          },
+          (error)=>{
+
+          }
+      )
     };
 
     //第二个弹出层默认为否
@@ -199,27 +234,35 @@ export default defineComponent({
         message.error('请输入系名')
       } else {
         //判断是否已经存在该系
-        for (let i in data.value) {
-          if (data.value[i].department === curValue.value) {
+        for (let i in sData.value) {
+          if (sData.value[i].name === curValue.value) {
             message.error('该系已存在')
             return false
           }
         }
-        //模拟添加
-        const newDepartment = {
-          key: Date.now().toString(),
-          id: Date.now(),
-          department: curValue.value
-        }
-        //向源数据追加
-        data.value.push(newDepartment)
-        message.success('添加成功')
+        proxy.$api.get(
+            '/addDepartment',
+            {},
+            {"departName":curValue.value},
+            (success)=>{
+              sData.value.splice(0,sData.value.length)
+              for (let i in success.data.data){
+                let id = success.data.data[i].id
+                success.data.data[i].key=id.toString()
+                sData.value.push(success.data.data[i])
+              }
+              message.success('添加成功')
+            },
+            (error)=>{
+
+            }
+        )
         visibleTwo.value = false;
       }
 
     }
     return {
-      data,
+      sData,
       columns,
       handleSearch,
       handleReset,
@@ -232,7 +275,8 @@ export default defineComponent({
       curValue,
       handleAdd,
       handleAddOk,
-      visibleTwo
+      visibleTwo,
+      showModifyM
     };
   },
 });

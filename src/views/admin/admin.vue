@@ -1,7 +1,7 @@
 <template>
   <div id="header">
     <p>{{whatEnd}} ({{name}})</p>
-    <span>注销</span>
+    <span @click="logout">注销</span>
   </div>
   <a-layout>
     <a-layout-sider
@@ -125,7 +125,9 @@
     SettingOutlined,
     ContactsOutlined,
   } from '@ant-design/icons-vue';
-  import {defineComponent, ref} from 'vue';
+  import {defineComponent, ref,onMounted,getCurrentInstance} from 'vue';
+  import $store from "../../store/index"
+  import { useRouter } from 'vue-router'
 
   export default defineComponent({
     components: {
@@ -149,7 +151,8 @@
     },
     setup() {
       const whatEnd = ref('管理员端')
-      const name = ref('刘杨')
+      const name = ref('')
+      name.value = $store.state.userInfo.user
       let isShowScroll = ref(true)
       const breakPoint = () => {
         if (window.innerWidth > 992) {
@@ -158,11 +161,20 @@
           isShowScroll.value = false
         }
       }
+      const router = useRouter()
+      const {proxy}:any = getCurrentInstance()
+      const logout = () =>{
+        localStorage.removeItem('store');
+        proxy.$cookie.clearCookie('user');
+        $store.replaceState(Object.assign({}, $store.state, null))
+        router.push('/login');
+      }
       return {
         breakPoint,
         isShowScroll,
         whatEnd,
-        name
+        name,
+        logout
       };
     },
   });

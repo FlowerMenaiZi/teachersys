@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination"
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
@@ -28,23 +28,7 @@
       </div>
     </template>
     <template #operation="{ record }">
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleModify(record.id)">修改
-        <a-modal v-model:visible="record.isShow" title="修改" @ok="handleOk()" okText="确认" cancelText="取消">
-          <label>老师名</label>
-          <a-input placeholder="请输入老师名" v-model:value="curTeacherName" style="margin-bottom: 4px"></a-input>
-          <label>密码</label>
-          <a-input placeholder="请输入密码" v-model:value="curTeacherPass" style="margin-bottom: 4px"></a-input>
-          <label>教研室</label>
-          <a-select style="width: 100%;margin-bottom: 4px" ref="select" @change="handleModifySelect"
-                    v-model:value="curSelValue">
-            <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.name">
-              {{ item.name }}
-            </a-select-option>
-          </a-select>
-          <label>是否是教研室管理人员:</label><br/>
-          <a-radio-group :options="options" @change="handleModifyRadio" v-model:value="curRadioValue"/>
-        </a-modal>
-      </a-button>
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleModify(record.id)">修改</a-button>
       <a-popconfirm
           title="是否要删除？"
           ok-text="是"
@@ -55,6 +39,21 @@
       </a-popconfirm>
     </template>
   </a-table>
+  <a-modal v-model:visible="showModifyM" title="修改" @ok="handleOk()" okText="确认" cancelText="取消">
+    <label>老师名</label>
+    <a-input placeholder="请输入老师名" v-model:value="curTeacherName" style="margin-bottom: 4px"></a-input>
+    <label>密码</label>
+    <a-input placeholder="请输入密码" v-model:value="curTeacherPass" style="margin-bottom: 4px"></a-input>
+    <label>教研室</label>
+    <a-select style="width: 100%;margin-bottom: 4px" ref="select" @change="handleModifySelect"
+              v-model:value="curSelValue">
+      <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.name">
+        {{ item.name }}
+      </a-select-option>
+    </a-select>
+    <label>是否是教研室管理人员:</label><br/>
+    <a-radio-group :options="options" @change="handleModifyRadio" v-model:value="curRadioValue"/>
+  </a-modal>
   <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleAdd">添加
     <a-modal v-model:visible="visibleTwo" title="添加" @ok="handleAddOk" okText="确认" cancelText="取消">
       <label>老师名</label>
@@ -64,7 +63,7 @@
       <label>教研室</label>
       <a-select style="width: 100%;margin-bottom: 4px" ref="select" @change="handleModifySelect"
                 v-model:value="curSelValue">
-        <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.name">
+        <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.id">
           {{ item.name }}
         </a-select-option>
       </a-select>
@@ -75,7 +74,7 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, reactive, ref, Ref} from 'vue';
+import {defineComponent, reactive, ref, Ref,getCurrentInstance,onMounted} from 'vue';
 import {message} from 'ant-design-vue';
 import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue';
 
@@ -83,10 +82,11 @@ import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue
 interface TableDataType {
   key: string;
   id: number;
-  teachersName: string;
-  teachersType: string;
-  teachingSection: string;
-  isShow?:boolean
+  name: string;
+  role: string;
+  staff: string;
+  staff_id:number;
+  user_role:number;
 }
 
 export default defineComponent({
@@ -104,82 +104,39 @@ export default defineComponent({
       pageSize: 5
     };
     //模拟数据，使用TableDataType接口验证数据
-    const data: Ref<TableDataType[]> = ref([
-      {
-        key: '1',
-        id: 1,
-        teachersName: '王景奇',
-        teachersType: '老师',
-        teachingSection: '系办教研室',
-        isShow:false
-      },
-      {
-        key: '2',
-        id: 2,
-        teachersName: '钟春琛',
-        teachersType: '老师',
-        teachingSection: '系办教研室'
-      },
-      {
-        key: '3',
-        id: 3,
-        teachersName: '郑镇耿',
-        teachersType: '教研室管理人员',
-        teachingSection: '网络教研室'
-      },
-      {
-        key: '4',
-        id: 4,
-        teachersName: '吴振庭',
-        teachersType: '教研室管理人员',
-        teachingSection: '系办教研室'
-      },
-      {
-        key: '5',
-        id: 5,
-        teachersName: '刘杨',
-        teachersType: '老师',
-        teachingSection: '系办教研室'
-      },
-    ]);
-    const sectionData = ref([
-      {
-        id: '1',
-        name: '系办教研室'
-      },
-      {
-        id: '2',
-        name: '网络教研室'
-      },
-      {
-        id: '3',
-        name: '商务教研室'
-      },
-      {
-        id: '4',
-        name: '会计教研室'
-      },
-      {
-        id: '5',
-        name: '灯饰教研室'
-      },
-      {
-        id: '6',
-        name: '环艺教研室'
-      },
-      {
-        id: '7',
-        name: '专业基础教研室'
-      },
-      {
-        id: '8',
-        name: '美容教研室'
-      },
-      {
-        id: '9',
-        name: '行政部门教研室'
-      },
-    ]);
+    const sData: Ref<TableDataType[]> = ref([]);
+    const sectionData:any = ref([]);
+    const {proxy}: any = getCurrentInstance()
+    onMounted(() => {
+      proxy.$api.get(
+          '/getTeacher',
+          {},
+          {},
+          (success) => {
+            for (let i in success.data.data) {
+              let id = success.data.data[i].id
+              success.data.data[i].key = id.toString()
+              sData.value.push(success.data.data[i])
+            }
+          },
+          (error) => {
+            console.log(error);
+          }
+      )
+      proxy.$api.get(
+          '/getStaff',
+          {},
+          {},
+          (success) => {
+            for (let i in success.data.data) {
+              sectionData.value.push(success.data.data[i])
+            }
+          },
+          (error) => {
+            console.log(error);
+          }
+      )
+    })
     //是否教研室管理员单选框内容
     const options = [
       {label: '是', value: 'yes'},
@@ -200,14 +157,14 @@ export default defineComponent({
       },
       {
         title: '老师名',
-        dataIndex: 'teachersName',
+        dataIndex: 'name',
         slots: {
           filterDropdown: 'filterDropdown',
           filterIcon: 'filterIcon',
           customRender: 'customRender',
         },
         onFilter: (value: string, record: TableDataType) =>
-            record.teachersName.toString().toLowerCase().includes(value.toLowerCase()),
+            record.name.toString().toLowerCase().includes(value.toLowerCase()),
         onFilterDropdownVisibleChange: (visible: any) => {
           if (visible) {
             setTimeout(() => {
@@ -218,24 +175,24 @@ export default defineComponent({
       },
       {
         title: '老师类型',
-        dataIndex: 'teachersType',
+        dataIndex: 'role',
         filters: [
           { text: '老师', value: '老师' },
           { text: '教研室管理人员', value: '教研室管理人员' },
         ],
-        onFilter: (value: string, record: TableDataType) => record.teachersType.includes(value),
+        onFilter: (value: string, record: TableDataType) => record.role.includes(value),
         ellipsis: true,
       },
       {
         title: '教研室',
-        dataIndex: 'teachingSection',
+        dataIndex: 'staff',
         slots: {
           filterDropdown: 'filterDropdown',
           filterIcon: 'filterIcon',
           customRender: 'customRender',
         },
         onFilter: (value: string, record: TableDataType) =>
-            record.teachingSection.toString().toLowerCase().includes(value.toLowerCase()),
+            record.staff.toString().toLowerCase().includes(value.toLowerCase()),
         onFilterDropdownVisibleChange: (visible: any) => {
           if (visible) {
             setTimeout(() => {
@@ -269,79 +226,111 @@ export default defineComponent({
     const _id = ref()
     const curSelValue = ref('')
     const curRadioValue = ref('')
+    const showModifyM = ref(false)
     //处理修改函数，传入key值
     const handleModify = (id: string) => {
       _id.value = id
       //显示弹出层
-      for (let i of data.value) {
+      for (let i of sData.value) {
 
         if (i.id === _id.value) {
           //设置弹出层input显示的值
-          curTeacherName.value = i.teachersName
-          curSelValue.value = i.teachingSection
+          curTeacherName.value = i.name
+          curSelValue.value = i.staff
           //根据老师类型设置单选框默认选择
-          if (i.teachersType === '老师') {
+          if (i.role === '老师') {
             curRadioValue.value = 'no'
-          } else if (i.teachersType === '教研室管理人员') {
+          } else if (i.role === '教研室主任') {
             curRadioValue.value = 'yes'
           }
         }
-        if (i.key === data.value[0].key) i.isShow = true
+        showModifyM.value = true
       }
     }
     //获取选择的教研室
     const selTeacherSection = ref('')
     const handleModifySelect = (value: string) => {
       selTeacherSection.value = value
-      console.log(value);
-      for (let i=0;i<sectionData.value.length;i++){
-        if (sectionData.value[i].name === value){
-          console.log(sectionData.value[i].id);
-        }
-      }
     };
     //是否更改了教研室管理人员选择
     const isTeacherSectionAdmin = ref('')
     const handleModifyRadio = (value: any) => {
-      // console.log(value.target.value);
       isTeacherSectionAdmin.value = value.target.value
     }
     //处理弹出层点击ok
+    const modifyPassSuccess = ref(true)
     const handleOk = () => {
-      for (let i in data.value) {
-        if (data.value[i].id === _id.value) {
+      for (let i in sData.value) {
+        if (sData.value[i].id === _id.value) {
           //修改源数据对应的值
           //是否修改了教研室
-          if (selTeacherSection.value !== '') {
-            data.value[i].teachingSection = selTeacherSection.value
-            selTeacherSection.value = ''
-          }
-          //是否修改了教研室管理人员
-          if (isTeacherSectionAdmin.value !== '') {
-            if (isTeacherSectionAdmin.value === 'no') {
-              data.value[i].teachersType = '老师'
-            } else if (isTeacherSectionAdmin.value === 'yes') {
-              data.value[i].teachersType = '教研室管理人员'
-            }
-            isTeacherSectionAdmin.value = ''
-          }
+          // if (selTeacherSection.value !== '') {
+          //   sData.value[i].staff = selTeacherSection.value
+          // }
+          // //是否修改了教研室管理人员
+          // if (isTeacherSectionAdmin.value !== '') {
+          //   if (isTeacherSectionAdmin.value === 'no') {
+          //     sData.value[i].role = '老师'
+          //   } else if (isTeacherSectionAdmin.value === 'yes') {
+          //     sData.value[i].role = '教研室主任'
+          //   }
+          //   isTeacherSectionAdmin.value = ''
+          // }
           //默认重新获取老师名并且修改
-          data.value[i].teachersName = curTeacherName.value
+          // sData.value[i].name = curTeacherName.value
           //是否修改了密码
           if (curTeacherPass.value !== '') {
             //  在这修改该老师密码
-            console.log('老师修改了密码');
+            proxy.$api.get(
+                '/updPassword',
+                {},
+                {'id':parseInt(_id.value),'password':curTeacherPass.value},
+                (success)=>{
+                  if(success.data.error == 2){
+                    message.error('密码与原密码一致');
+                    modifyPassSuccess.value = false
+                  }else if(success.data.error == 1){
+                    message.error('修改密码失败');
+                    modifyPassSuccess.value = false
+                  }
+                },
+                (error)=>{
+
+                }
+            )
             curTeacherPass.value = ''
           }
+
+          message.success('修改成功')
+          showModifyM.value = false
         }
-        message.success('修改成功')
-        data.value[0].isShow = false
       }
+
     };
     //确认删除
     const confirm = (key: string) => {
-      data.value = data.value.filter(item => item.key !== key)
-      message.success('删除成功');
+      proxy.$api.get(
+          '/delTeacher',
+          {},
+          {'id':parseInt(key)},
+          (success)=>{
+            if(success.data.error == 0){
+              message.success('删除成功');
+              sData.value.splice(0,sData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                sData.value.push(success.data.data[i])
+              }
+            }else{
+              message.error('删除失败');
+            }
+          },
+          (error)=>{
+
+          }
+      )
+
     };
     //第二个弹出层默认为否
     const visibleTwo = ref(false);
@@ -370,39 +359,45 @@ export default defineComponent({
       } else if (isTeacherSectionAdmin.value === '') {
         message.error('请选择是否为教研室管理人员')
         return false
-      }
-      //判断是否已经存在该系
-      for (let i in data.value) {
-        if (data.value[i].teachersName === curTeacherName.value.trim()
-            &&
-            data.value[i].teachingSection === selTeacherSection.value) {
-          message.error('该老师已经存在')
-          return false
+      }else{
+        //判断是否已经存在该教研室
+        for (let i in sData.value) {
+          if (sData.value[i].name === curTeacherName.value.trim()
+              &&
+              sData.value[i].staff_id === parseInt(selTeacherSection.value)) {
+            message.error('该老师已经存在')
+            return false
+          }
         }
-      }
-      let newTeacherType = ''
-      if (isTeacherSectionAdmin.value === 'no'){
-        newTeacherType = '老师'
-      }else if (isTeacherSectionAdmin.value === 'yes'){
-        newTeacherType = '教研室管理人员'
+        let newTeacherType = ''
+        if (isTeacherSectionAdmin.value === 'no'){
+          newTeacherType = '老师'
+        }else if (isTeacherSectionAdmin.value === 'yes'){
+          newTeacherType = '教研室主任'
+        }
+        proxy.$api.get(
+            "/addTeacher",
+            {},
+            {'name':curTeacherName.value,'power':newTeacherType,'staff_id':curSelValue.value,'password':curTeacherPass.value},
+            (success)=>{
+              sData.value.splice(0,sData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                sData.value.push(success.data.data[i])
+              }
+
+              message.success('添加成功')
+            },
+            (error)=>{}
+        )
       }
 
-      //模拟添加
-      const newTeacher = {
-        key:Date.now().toString(),
-        id: Date.now(),
-        teachersName: curTeacherName.value,
-        teachersType: newTeacherType,
-        teachingSection: curSelValue.value,
-      }
-      //向源数据追加
-      data.value.push(newTeacher)
-      message.success('添加成功')
       visibleTwo.value = false;
 
     }
     return {
-      data,
+      sData,
       columns,
       handleSearch,
       handleReset,
@@ -421,7 +416,8 @@ export default defineComponent({
       handleModifyRadio,
       curSelValue,
       curRadioValue,
-      curTeacherPass
+      curTeacherPass,
+      showModifyM
     };
   },
 });

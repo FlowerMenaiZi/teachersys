@@ -1,4 +1,4 @@
-import {createRouter, createWebHistory, RouteRecordRaw} from 'vue-router'
+import {createRouter, createWebHistory, RouteRecordRaw, useRoute} from 'vue-router'
 
 
 const routes: Array<RouteRecordRaw> = [
@@ -15,6 +15,10 @@ const routes: Array<RouteRecordRaw> = [
     path: '/admin',
     name: 'Admin',
     component: () => import('../views/admin/admin.vue'),
+    meta: {
+      roles: 3,
+      requireLogin: true
+    },
     children: [
       {
         path: 'department',
@@ -68,9 +72,14 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/teacher',
-    name: 'teacher',
+    name: 'Teacher',
     component: () => import('../views/teacher/teacher.vue'),
-    children:[
+    meta: {
+      roles: 1,
+      roleB: 2,
+      requireLogin: true
+    },
+    children: [
       {
         path: 'evenStudyCheck',
         component: () => import('../views/teacher/evenStudyCheck.vue')
@@ -107,14 +116,23 @@ const routes: Array<RouteRecordRaw> = [
   },
   {
     path: '/clazz',
-    name: 'clazz',
+    name: 'Clazz',
     component: () => import('../views/clazz/clazz.vue'),
-    children:[
+    meta: {
+      roles: 4,
+      requireLogin: true
+    },
+    children: [
       {
         path: 'evenStudyCheck',
         component: () => import('../views/clazz/evenStudyCheck.vue')
       },
     ]
+  },
+  {
+    path: '/404',
+    name: '404',
+    component: () => import('../views/404.vue')
   },
 ]
 
@@ -122,5 +140,32 @@ const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes
 })
+
+import $store from "../store/index"
+
+router.beforeEach(((to, from, next) => {
+  if (to.meta.requireLogin) {
+    if ($store.state.userInfo.isLogin) {
+      // console.log(1);
+      if ($store.state.userInfo.role === to.meta.roles) {
+        next()
+      } else if ($store.state.userInfo.role === to.meta.roleB){
+        next()
+      } else {
+        router.back()
+      }
+    } else {
+      next({name: 'Login'})
+    }
+  } else {
+    if (to.matched.length === 0) {
+      from.name ? next({
+        name: from.name
+      }) : next('/404');
+    } else {
+      next();
+    }
+  }
+}))
 
 export default router

@@ -1,7 +1,7 @@
 <template>
   <div id="header">
     <p>{{whatEnd}} ({{name}})</p>
-    <span>注销</span>
+    <span @click="logout">注销</span>
   </div>
   <a-layout>
     <a-layout-sider
@@ -35,7 +35,7 @@
           </a-menu-item>
         </a-sub-menu>
         <!--教研室管理员查看-->
-        <a-sub-menu>
+        <a-sub-menu :class="isStaffAdmin?'disNone':''">
           <template #title>
             <span>
               <ReadOutlined />
@@ -87,7 +87,9 @@
     FileSearchOutlined,
     ReadOutlined
   } from '@ant-design/icons-vue';
-  import {defineComponent, ref} from 'vue';
+  import {defineComponent, ref,getCurrentInstance} from 'vue';
+  import $store from "../../store/index"
+  import { useRouter } from 'vue-router'
 
   export default defineComponent({
     name: "teacher",
@@ -103,7 +105,14 @@
     },
     setup() {
       const whatEnd = ref('老师端')
-      const name = ref('刘杨')
+      const name = ref('')
+      const isStaffAdmin = ref()
+      name.value = $store.state.userInfo.user
+      if ($store.state.userInfo.role === 1){
+        isStaffAdmin.value = true
+      } else {
+        isStaffAdmin.value = false
+      }
       let isShowScroll = ref(true)
       const breakPoint = () => {
         if (window.innerWidth > 992) {
@@ -112,11 +121,21 @@
           isShowScroll.value = false
         }
       }
+      const router = useRouter()
+      const {proxy}:any = getCurrentInstance()
+      const logout = () =>{
+        localStorage.removeItem('store');
+        proxy.$cookie.clearCookie('user');
+        $store.replaceState(Object.assign({}, $store.state, null))
+        router.push('/login');
+      }
       return {
         breakPoint,
         isShowScroll,
         whatEnd,
-        name
+        name,
+        isStaffAdmin,
+        logout
       };
     },
   });
@@ -172,5 +191,8 @@
 
   #header span {
     cursor: pointer;
+  }
+  .disNone{
+    display: none;
   }
 </style>
