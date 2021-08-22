@@ -53,10 +53,11 @@
                   message.error('登录失败')
                 }else{
                   message.success('登录成功')
-                  proxy.$cookie.setCookie('user',success.data.data.token,60)
+                  proxy.$cookie.setCookie('user',success.data.data.token,7200)
                   $store.commit('userLogin',{
                     getLoginState:true,
                     roleLevel:success.data.data.user_role,
+                    userId:success.data.data.id,
                     userName:success.data.data.name,
                     userToken:success.data.data.token,
                   })

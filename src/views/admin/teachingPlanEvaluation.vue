@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination"
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
@@ -30,26 +30,8 @@
     <template #operation="{ record }">
       <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleSee(record.key)">查看
       </a-button>
-      <a-modal v-model:visible="record.isShow" title="查看教案测评记录项" @ok="handleOk()" okText="确认" cancelText="取消"
-               width="90%">
-        <a-table :columns="columns2" :data-source="itemData" :scroll="{ x: 1200, y: 300 }"
-                 :pagination="pagination" :rowKey="itemData.key">
-          <template #operation="{ record }">
-            <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.key)">
-              修改
-            </a-button>
-            <a-popconfirm
-                    title="是否要删除？"
-                    ok-text="是"
-                    cancel-text="否"
-                    @confirm="itemConfirm(record.key)"
-            >
-              <a-button type="danger">删除</a-button>
-            </a-popconfirm>
-          </template>
-        </a-table>
-      </a-modal>
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleExport(record.key)">导出
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}">
+        <a :href="handleExport(record.key)" target="_blank">导出</a>
       </a-button>
       <a-popconfirm
               title="是否要删除？"
@@ -61,7 +43,25 @@
       </a-popconfirm>
     </template>
   </a-table>
-
+  <a-modal v-model:visible="showSee" title="查看教案测评记录项" @ok="handleOk()" okText="确认" cancelText="取消"
+           width="90%">
+    <a-table :columns="columns2" :data-source="itemData" :scroll="{ x: 1200}"
+             :pagination="pagination" :rowKey="itemData.key">
+      <template #operation="{ record }">
+        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.key)">
+          修改
+        </a-button>
+        <a-popconfirm
+                title="是否要删除？"
+                ok-text="是"
+                cancel-text="否"
+                @confirm="itemConfirm(record.key)"
+        >
+          <a-button type="danger">删除</a-button>
+        </a-popconfirm>
+      </template>
+    </a-table>
+  </a-modal>
   <a-modal v-model:visible="showModify" title="修改教案测评记录项" @ok="handleModifyOk()" okText="确认" cancelText="取消"
            width="40%">
     <label>教案上传（审批）情况（10%）:</label>
@@ -91,7 +91,7 @@
       <label>教研室</label>
       <a-select style="width: 100%;margin-bottom: 4px" @change="handleModifySelect"
                 v-model:value="curSelValue">
-        <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.name">
+        <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.id">
           {{ item.name }}
         </a-select-option>
       </a-select>
@@ -100,18 +100,19 @@
 </template>
 
 <script lang="ts">
-  import {defineComponent, reactive, ref, Ref} from 'vue';
+  import {defineComponent, reactive, ref, Ref,getCurrentInstance,onMounted,computed} from 'vue';
   import {message} from 'ant-design-vue';
   import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue';
 
   //设置接收数据的接口
   interface TableDataType {
     key: string;
-    date: string;
+    id:number;
+    created_at: string;
     term: string;
-    teachingSection: string;
-    examiner: string;
-    isShow?: boolean;
+    staff: string;
+    teacher_id: number;
+    teacher: string;
   }
 
   export default defineComponent({
@@ -129,74 +130,42 @@
         pageSize: 5
       }
       //模拟数据，使用TableDataType接口验证数据
-      const data: Ref<TableDataType[]> = ref([
-        {
-          key: '1',
-          date: "2021-07-05",
-          term: '2020-2021学年度 第2学期',
-          teachingSection: '网络教研室',
-          examiner: '',
-          isShow: false,
-        },
-        {
-          key: '2',
-          date: "2021-07-06",
-          term: '2020-2021学年度 第2学期',
-          teachingSection: '系办教研室',
-          examiner: '',
-        }
-      ])
-      const itemData = ref([
-        {
-          key: '',
-          teacherName: '',
-          courseName: '',
-          uploadScore: '',
-          formatScore: '',
-          completeScore: '',
-          designScore: '',
-          totalScore: ''
-        },
-      ])
+      const sData: Ref<TableDataType[]> = ref([])
+      const itemData:any = ref([])
       //教研室
-      const sectionData = ref([
-        {
-          id: '1',
-          name: '系办教研室'
-        },
-        {
-          id: '2',
-          name: '网络教研室'
-        },
-        {
-          id: '3',
-          name: '商务教研室'
-        },
-        {
-          id: '4',
-          name: '会计教研室'
-        },
-        {
-          id: '5',
-          name: '灯饰教研室'
-        },
-        {
-          id: '6',
-          name: '环艺教研室'
-        },
-        {
-          id: '7',
-          name: '专业基础教研室'
-        },
-        {
-          id: '8',
-          name: '美容教研室'
-        },
-        {
-          id: '9',
-          name: '行政部门教研室'
-        },
-      ])
+      const sectionData:any = ref([])
+      const {proxy}:any = getCurrentInstance()
+      onMounted(()=>{
+        proxy.$api.get(
+            '/getStaff',
+            {},
+            {},
+            (success) => {
+              for (let i in success.data.data) {
+                sectionData.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
+              console.log(error);
+            }
+        )
+        proxy.$api.get(
+            '/getTEvaluation',
+            {},
+            {},
+            (success) => {
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                sData.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
+              console.log(error);
+            }
+        )
+      })
       //搜索框状态
       const state = reactive({
         searchText: '',
@@ -206,9 +175,9 @@
       const columns = [
         {
           title: '日期',
-          dataIndex: 'date',
+          dataIndex: 'created_at',
           defaultSortOrder: 'false',
-          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.date) - Date.parse(b.date),
+          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.created_at) - Date.parse(b.created_at),
         },
         {
           title: '学期',
@@ -230,14 +199,14 @@
         },
         {
           title: '教研室',
-          dataIndex: 'teachingSection',
+          dataIndex: 'staff',
           slots: {
             filterDropdown: 'filterDropdown',
             filterIcon: 'filterIcon',
             customRender: 'customRender',
           },
           onFilter: (value: string, record: TableDataType) =>
-              record.teachingSection.toString().toLowerCase().includes(value.toLowerCase()),
+              record.staff.toString().toLowerCase().includes(value.toLowerCase()),
           onFilterDropdownVisibleChange: (visible: any) => {
             if (visible) {
               setTimeout(() => {
@@ -248,14 +217,14 @@
         },
         {
           title: '检查人',
-          dataIndex: 'examiner',
+          dataIndex: 'teacher',
           slots: {
             filterDropdown: 'filterDropdown',
             filterIcon: 'filterIcon',
             customRender: 'customRender',
           },
           onFilter: (value: string, record: TableDataType) =>
-              record.examiner.toString().toLowerCase().includes(value.toLowerCase()),
+              record.teacher_id.toString().toLowerCase().includes(value.toLowerCase()),
           onFilterDropdownVisibleChange: (visible: any) => {
             if (visible) {
               setTimeout(() => {
@@ -271,13 +240,65 @@
         },
       ]
       const columns2 = [
-        {title: '教师姓名', width: 100, dataIndex: 'teacherName', key: 'teacherName', fixed: 'left', align: 'center'},
-        {title: '课程', dataIndex: 'courseName', key: 'courseName', width: 100, fixed: 'left', align: 'center'},
-        {title: '教案上传（审批）情况（10%）', dataIndex: 'uploadScore', key: 'uploadScore', width: 180, align: 'center'},
-        {title: '教案格式规范性（10%）', dataIndex: 'formatScore', key: 'teachingPlanFormat', width: 180, align: 'center'},
-        {title: '教学内容完整性（40%）', dataIndex: 'completeScore', key: 'completeScore', width: 180, align: 'center'},
-        {title: '教学设计科学性（40%）', dataIndex: 'designScore', key: 'designScore', width: 180, align: 'center'},
-        {title: '合计', dataIndex: 'totalScore', key: 'totalScore', width: 120, align: 'center'},
+        {title: '教师姓名', width: 100, dataIndex: 'teacher', key: 'teacher', fixed: 'left', align: 'center'},
+        {title: '课程', dataIndex: 'course', key: 'course', width: 140, fixed: 'left', align: 'center'},
+        {title: '教案上传（审批）情况（10%）', dataIndex: 'upload_score', key: 'upload_score', width: 140, align: 'center',
+          onCell: () => {
+            return {
+              style: {
+                maxWidth: 140,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow:'ellipsis',
+                cursor:'pointer'
+              }
+            }
+          },
+          ellipsis: true,
+        },
+        {title: '教案格式规范性（10%）', dataIndex: 'format_score', key: 'format_score', width: 140, align: 'center',
+          onCell: () => {
+            return {
+              style: {
+                maxWidth: 140,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow:'ellipsis',
+                cursor:'pointer'
+              }
+            }
+          },
+          ellipsis: true,
+        },
+        {title: '教学内容完整性（40%）', dataIndex: 'complete_score', key: 'complete_score', width: 140, align: 'center',
+          onCell: () => {
+            return {
+              style: {
+                maxWidth: 140,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow:'ellipsis',
+                cursor:'pointer'
+              }
+            }
+          },
+          ellipsis: true,
+        },
+        {title: '教学设计科学性（40%）', dataIndex: 'design_score', key: 'design_score', width: 140, align: 'center',
+          onCell: () => {
+            return {
+              style: {
+                maxWidth: 140,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow:'ellipsis',
+                cursor:'pointer'
+              }
+            }
+          },
+          ellipsis: true,
+        },
+        {title: '合计', dataIndex: 'total_score', key: 'total_score', width: 100, align: 'center'},
         {
           title: '操作',
           dataIndex: 'operation',
@@ -302,42 +323,25 @@
       const _key = ref()
       const curSelValue = ref('')
       const showModify = ref(false)
+      const showSee = ref(false)
       const handleSee = (key: string) => {
-        itemData.value.splice(0, itemData.value.length)
-        for (let i in data.value) {
-          if (data.value[i].key === data.value[0].key) data.value[i].isShow = true
-        }
+        showSee.value = true
+        proxy.$api.get(
+            '/getTEvaluationItem',
+            {},
+            {'id':parseInt(key)},
+            (success)=>{
+              itemData.value.splice(0, itemData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                itemData.value.push(success.data.data[i])
+              }
+            },
+            (error)=>{
 
-        //在这进行数据请求///////////////////////////////////////////////////////////
-        if (key === '1') {
-          const getData = [
-            {
-              key: '1',
-              teacherName: '郑镇耿',
-              courseName: 'LINUX服务器管理(下)',
-              uploadScore: '',
-              formatScore: '',
-              completeScore: '',
-              designScore: '',
-              totalScore: ''
             }
-          ]
-          itemData.value = getData
-        } else {
-          const getData2 = [
-            {
-              key: '1',
-              teacherName: '郑镇耿',
-              courseName: 'LINUX服务器管理(下)',
-              uploadScore: '',
-              formatScore: '',
-              completeScore: '',
-              designScore: '',
-              totalScore: ''
-            }
-          ]
-          itemData.value = getData2
-        }
+        )
       }
       //处理修改函数，传入key值
       const uploadScore = ref('')
@@ -351,11 +355,11 @@
         //显示弹出层
         for (let i = 0; i < itemData.value.length; i++) {
           if (itemData.value[i].key === _key.value) {
-            uploadScore.value = itemData.value[i].uploadScore
-            formatScore.value = itemData.value[i].formatScore
-            completeScore.value = itemData.value[i].completeScore
-            designScore.value = itemData.value[i].designScore
-            totalScore.value = itemData.value[i].totalScore
+            uploadScore.value = itemData.value[i].upload_score
+            formatScore.value = itemData.value[i].format_score
+            completeScore.value = itemData.value[i].complete_score
+            designScore.value = itemData.value[i].design_score
+            totalScore.value = itemData.value[i].total_score
           }
         }
       }
@@ -363,26 +367,52 @@
         totalScore.value = uploadScore.value + formatScore.value + completeScore.value + designScore.value
       }
       const handleModifyOk = () => {
-        //在这进行数据修改上传数据库//////////////////////////////////////////////
-        for (let i = 0; i < itemData.value.length; i++) {
-          if (itemData.value[i].key === _key.value) {
-            itemData.value[i].uploadScore = uploadScore.value
-            itemData.value[i].formatScore = formatScore.value
-            itemData.value[i].completeScore = completeScore.value
-            itemData.value[i].designScore = designScore.value
-            itemData.value[i].totalScore = totalScore.value
-          }
-        }
-        showModify.value = false
-        message.success('修改成功')
+       proxy.$api.get(
+           '/updTEvaluationItem',
+           {},
+           {'id':parseInt(_key.value),'upload_score':uploadScore.value,'format_score':formatScore.value,'complete_score':completeScore.value,'design_score':designScore.value,'total_score':totalScore.value},
+           (success)=>{
+             if (success.data.error === 0){
+               for (let i = 0; i < itemData.value.length; i++) {
+                 if (itemData.value[i].key === _key.value) {
+                   itemData.value[i].upload_score = uploadScore.value
+                   itemData.value[i].format_score = formatScore.value
+                   itemData.value[i].complete_score = completeScore.value
+                   itemData.value[i].design_score = designScore.value
+                   itemData.value[i].total_score = totalScore.value
+                 }
+               }
+               showModify.value = false
+               message.success('修改成功')
+             }else{
+               message.error('修改失败')
+             }
+           },
+           (error)=>{
+
+           }
+       )
       }
 
       const itemConfirm = (key: string) => {
-        itemData.value = itemData.value.filter(item => item.key != key)
-      }
-      const handleExport = (key: string) => {
+        proxy.$api.get(
+            '/delTEvaluationItem',
+            {},
+            {'id':parseInt(key)},
+            (success)=>{
+              if (success.data.error === 0){
+                itemData.value = itemData.value.filter(item => item.key != key)
+                message.success('删除成功')
+              }
+            },
+            (error)=>{
 
+            }
+        )
       }
+      const handleExport = computed(()=>(id)=>{
+        return 'http://119.29.185.52:9001/exportTEvaluation?id='+parseInt(id);
+      })
       //获取选择的教研室
       const selDepartment = ref('')
       const handleModifySelect = (value: string) => {
@@ -390,14 +420,32 @@
       };
       //处理弹出层点击ok
       const handleOk = () => {
-        for (let i in data.value) {
-          data.value[0].isShow = false
-        }
+        showModify.value = false
       };
       //确认删除
       const confirm = (key: string) => {
-        data.value = data.value.filter(item => item.key !== key)
-        message.success('删除成功');
+        proxy.$api.get(
+            '/delTEvaluation',
+            {},
+            {'id':parseInt(key)},
+            (success)=>{
+              if (success.data.error === 0) {
+                sData.value.splice(0, sData.value.length)
+                for (let i in success.data.data) {
+                  let id = success.data.data[i].id
+                  success.data.data[i].key = id.toString()
+                  success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                  sData.value.push(success.data.data[i])
+                }
+                message.success('删除成功')
+              } else {
+                message.success('删除失败')
+              }
+            },
+            (error)=>{
+
+            }
+        )
       };
       //第二个弹出层默认为否
       const visibleTwo = ref(false);
@@ -415,8 +463,8 @@
           return false
         }
         const isTeachingSec = ref(false)
-        for (let i = 0; i < data.value.length; i++) {
-          if (data.value[i].teachingSection === curSelValue.value) {
+        for (let i = 0; i < sData.value.length; i++) {
+          if (sData.value[i].staff === curSelValue.value) {
             isTeachingSec.value = true
           }
         }
@@ -424,34 +472,30 @@
           message.error('该教研室已存在')
           return false
         }
-        //模拟添加/////////////////////////////////////////////////////
-        let now = new Date();
-        let year = now.getFullYear();
-        let month = now.getMonth() + 1;
-        let day = now.getDate();
-        let clock = year + "-";
-        if (month < 10)
-          clock += "0";
-        clock += month + "-";
-        if (day < 10)
-          clock += "0";
-        clock += day + " ";
-        const newHCheck = {
-          key: Date.now().toString(),
-          date: clock.toString(),
-          term: '2020-2021学年度 第2学期',
-          teachingSection: curSelValue.value,
-          examiner: '',
-        }
-        //向源数据追加
-        data.value.push(newHCheck)
-        message.success('添加成功')
+        proxy.$api.get(
+            '/addTEvaluation',
+            {},
+            {'staff_id':parseInt(curSelValue.value)},
+            (success)=>{
+              sData.value.splice(0, sData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                sData.value.push(success.data.data[i])
+              }
+              message.success('添加成功')
+            },
+            (error)=>{
+
+            }
+        )
         curSelValue.value = ''
         visibleTwo.value = false;
 
       }
       return {
-        data,
+        sData,
         columns,
         handleSearch,
         handleReset,
@@ -478,14 +522,15 @@
         totalScore,
         handleModifyOk,
         itemConfirm,
-        calcTotalScore
+        calcTotalScore,
+        showSee
       };
     },
   });
 </script>
 
 <style>
-  .ant-modal-mask {
-    background-color: rgba(0, 0, 0, 0.3);
+  .ant-spin-container .ant-table-fixed-left .ant-table-tbody > tr{
+    height: 107px !important;
   }
 </style>

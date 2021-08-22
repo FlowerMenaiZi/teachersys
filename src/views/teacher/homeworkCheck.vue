@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination">
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
         <a-input
@@ -33,24 +33,30 @@
   <a-modal v-model:visible="showAllItem" title="查看作业批改情况表" @ok="handleSeeOk()" okText="确认" cancelText="取消" width="70%">
     <a-table :columns="columns2" :data-source="itemData" :pagination="pagination">
       <template #operation="{ record }">
-        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.id)">
+        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.homework_check_item_id)">
           修改
         </a-button>
       </template>
     </a-table>
   </a-modal>
-  <a-modal v-model:visible="showSetItem" title="修改作业批改情况项" @ok="handleModifyOk()" okText="确认" cancelText="取消" width="500px">
+  <a-modal v-model:visible="showSetItem" title="修改作业批改情况项" @ok="handleModifyOk()" okText="确认" cancelText="取消"
+           width="500px">
 
     <label>周课时及实习周数:</label>
-    <a-input-number placeholder="请输入周课时及实习周数" style="width:100%;margin-bottom: 10px" :min="0" v-model:value="weeklyClassHour"></a-input-number>
+    <a-input-number placeholder="请输入周课时及实习周数" style="width:100%;margin-bottom: 10px" :min="0"
+                    v-model:value="weeklyClassHour"></a-input-number>
     <label>布置书面作业次数:</label>
-    <a-input-number placeholder="请输入布置书面作业次数" style="width:100%;margin-bottom: 10px" :min="0" v-model:value="assignHomeworkNumber"></a-input-number>
+    <a-input-number placeholder="请输入布置书面作业次数" style="width:100%;margin-bottom: 10px" :min="0"
+                    v-model:value="assignHomeworkNumber"></a-input-number>
     <label>批改书面作业次数:</label>
-    <a-input-number placeholder="请输入批改书面作业次数" style="width:100%;margin-bottom: 10px" :min="0" v-model:value="correctingHomeworkNumber"></a-input-number>
+    <a-input-number placeholder="请输入批改书面作业次数" style="width:100%;margin-bottom: 10px" :min="0"
+                    v-model:value="correctingHomeworkNumber"></a-input-number>
     <label>实习（验）报告（个）:</label>
-    <a-input-number placeholder="请输入实习（验）报告（个）" style="width:100%;margin-bottom: 10px" :min="0" v-model:value="internship"></a-input-number>
+    <a-input-number placeholder="请输入实习（验）报告（个）" style="width:100%;margin-bottom: 10px" :min="0"
+                    v-model:value="internship"></a-input-number>
     <label>其他作业批改次数:</label>
-    <a-input-number placeholder="请输入其他作业批改次数" style="width:100%;margin-bottom: 10px" :min="0" v-model:value="otherHomeworkNumber"></a-input-number>
+    <a-input-number placeholder="请输入其他作业批改次数" style="width:100%;margin-bottom: 10px" :min="0"
+                    v-model:value="otherHomeworkNumber"></a-input-number>
     <label>评价：</label>
     <a-input placeholder="请输入评价" style="width:100%;margin-bottom: 10px" v-model:value="evaluate"></a-input>
 
@@ -58,15 +64,18 @@
 </template>
 
 <script lang="ts">
-  import {defineComponent, ref, reactive, UnwrapRef, Ref} from 'vue';
+  import {defineComponent, ref, reactive, UnwrapRef, Ref, onMounted, getCurrentInstance} from 'vue';
   import {message} from 'ant-design-vue';
+  import $store from "../../store/index"
   import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue';
+
   interface TableDataType {
     key: string;
     id: number;
-    date: string;
+    created_at: string;
     term: string;
   }
+
   export default defineComponent({
     name: "homeworkCheck",
     components: {
@@ -88,20 +97,33 @@
       });
       /*第一个弹出层*/
       //模拟数据，使用TableDataType接口验证数据
-      const data: Ref<TableDataType[]> = ref([
-        {
-          key: '1',
-          id: 1,
-          date: '2021-06-26',
-          term: '2020-2021学年度 第2学期',
-        }
-      ]);
+      const sData: Ref<TableDataType[]> = ref([]);
+      const {proxy}: any = getCurrentInstance()
+      onMounted(() => {
+        proxy.$api.get(
+            '/getTHomeCheck',
+            {},
+            {'id': $store.state.userInfo.id},
+            (success) => {
+              sData.value.splice(0, sData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                sData.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
+
+            }
+        )
+      })
       //设置表头及字段排序或字段搜索
       const columns = [
         {
           title: '日期',
-          dataIndex: 'date',
-          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.date) - Date.parse(b.date)
+          dataIndex: 'created_at',
+          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.created_at) - Date.parse(b.created_at)
         },
         {
           title: '学期',
@@ -128,41 +150,11 @@
         },
       ];
       const showAllItem = ref(false);
-      const handleCheck = (key:string) =>{
-        showAllItem.value = true
-      }
       /*第二个弹出层*/
-      const itemData = ref([
-        {
-          key:'1',
-          id:1,
-          tpc:20,
-          course:'短视频制作',
-          clazz:'',
-          assignHomeworkNumber:'',  //布置书面作业次数
-          correctingHomeworkNumber:'', //批改书面作业次数
-          internship:'', //实习（验）报告（个）
-          otherHomeworkNumber:'',  //其他作业批改次数
-          weeklyClassHour:'',  //周课时及实习周数
-          evaluate:'',  //评价
-        },
-        {
-          key:'2',
-          id:2,
-          tpc:20,
-          course:'商品摄影',
-          clazz:'',
-          assignHomeworkNumber:'',
-          correctingHomeworkNumber:'',
-          internship:'',
-          otherHomeworkNumber:'',
-          weeklyClassHour:'',
-          evaluate:'',
-        },
-      ])
+      const itemData:any = ref([])
       const columns2 = [
-        {title: '课程',  dataIndex: 'course', key: 'course',width: 150},
-        {title: '班级', dataIndex: 'clazzName', key: 'clazzName', width: 100},
+        {title: '课程', dataIndex: 'name', key: 'name', width: 150},
+        {title: '班级', dataIndex: 'clazz', key: 'clazz', width: 100},
         {
           title: '操作',
           dataIndex: 'operation',
@@ -171,7 +163,27 @@
           slots: {customRender: 'operation'},
         },
       ];
-      const handleSeeOk = () =>{
+      const handleCheck = () => {
+        proxy.$api.get(
+            '/getTHomeCheckItem',
+            {},
+            {'id':$store.state.userInfo.id},
+            (success)=>{
+              itemData.value.splice(0, itemData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].clazz = success.data.data[i].clazz.join("，")
+                itemData.value.push(success.data.data[i])
+              }
+
+              showAllItem.value = true
+            },
+            (error)=>{}
+        )
+      }
+
+      const handleSeeOk = () => {
         showAllItem.value = false
       }
 
@@ -184,35 +196,47 @@
       const otherHomeworkNumber = ref('')         //其他作业批改次数
       const weeklyClassHour = ref('')             //周课时及实习周数
       const evaluate = ref('')                    //评价
-      const handleModify = (key:number) =>{
+      const handleModify = (key: number) => {
         _id.value = key
         for (let i in itemData.value) {
-          if (itemData.value[i].id === _id.value) {
-            assignHomeworkNumber.value = itemData.value[i].assignHomeworkNumber
-            correctingHomeworkNumber.value = itemData.value[i].correctingHomeworkNumber
+          if (itemData.value[i].homework_check_item_id === _id.value) {
+            assignHomeworkNumber.value = itemData.value[i].assign_homework_number
+            correctingHomeworkNumber.value = itemData.value[i].correcting_homework_number
             internship.value = itemData.value[i].internship
-            otherHomeworkNumber.value = itemData.value[i].otherHomeworkNumber
-            weeklyClassHour.value = itemData.value[i].weeklyClassHour
+            otherHomeworkNumber.value = itemData.value[i].other_homework_number
+            weeklyClassHour.value = itemData.value[i].weekly_class_hour
             evaluate.value = itemData.value[i].evaluate
           }
         }
         showSetItem.value = true
       }
-      const handleModifyOk = () =>{
-        for (let i in itemData.value) {
-          if (itemData.value[i].id === _id.value) {
-            itemData.value[i].assignHomeworkNumber = assignHomeworkNumber.value
-            itemData.value[i].correctingHomeworkNumber = correctingHomeworkNumber.value
-            itemData.value[i].internship = internship.value
-            itemData.value[i].otherHomeworkNumber = otherHomeworkNumber.value
-            itemData.value[i].weeklyClassHour = weeklyClassHour.value
-            itemData.value[i].evaluate = evaluate.value
-          }
-        }
-        showSetItem.value = false
+      const handleModifyOk = () => {
+        proxy.$api.get(
+            '/updTHomeCheckItem',
+            {},
+            {'id':parseInt(_id.value),'assign_homework_number':assignHomeworkNumber.value,'correcting_homework_number':correctingHomeworkNumber.value,'internship':internship.value,'other_homework_number':otherHomeworkNumber.value,'weekly_class_hour':weeklyClassHour.value,'evaluate':evaluate.value},
+            (success)=>{
+              if (success.data.error === 0){
+                for (let i in itemData.value) {
+                  if (itemData.value[i].homework_check_item_id === _id.value) {
+                    itemData.value[i].assign_homework_number = assignHomeworkNumber.value
+                    itemData.value[i].correcting_homework_number = correctingHomeworkNumber.value
+                    itemData.value[i].internship = internship.value
+                    itemData.value[i].other_homework_number = otherHomeworkNumber.value
+                    itemData.value[i].weekly_class_hour = weeklyClassHour.value
+                    itemData.value[i].evaluate = evaluate.value
+                  }
+                }
+                showSetItem.value = false
+              }
+            },
+            (error)=>{
+
+            }
+        )
       }
       return {
-        data,
+        sData,
         columns,
         pagination,
         handleCheck,

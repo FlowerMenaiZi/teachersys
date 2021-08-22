@@ -4,6 +4,7 @@ const store = createStore({
   state: {
     userInfo:{
       isLogin:false,
+      id:0,
       role:-1,
       user:'',
       token:''
@@ -12,6 +13,7 @@ const store = createStore({
   mutations: {
     userLogin(state,userInfoS){
       state.userInfo.isLogin = userInfoS.getLoginState
+      state.userInfo.id = userInfoS.userId
       state.userInfo.role = userInfoS.roleLevel
       state.userInfo.user = userInfoS.userName
       state.userInfo.token = userInfoS.userToken

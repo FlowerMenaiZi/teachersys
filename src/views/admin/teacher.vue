@@ -47,7 +47,7 @@
     <label>教研室</label>
     <a-select style="width: 100%;margin-bottom: 4px" ref="select" @change="handleModifySelect"
               v-model:value="curSelValue">
-      <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.name">
+      <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.id">
         {{ item.name }}
       </a-select-option>
     </a-select>
@@ -224,7 +224,7 @@ export default defineComponent({
     const curTeacherPass = ref('')
     //设置当前点击的key值为空
     const _id = ref()
-    const curSelValue = ref('')
+    const curSelValue = ref()
     const curRadioValue = ref('')
     const showModifyM = ref(false)
     //处理修改函数，传入key值
@@ -232,11 +232,10 @@ export default defineComponent({
       _id.value = id
       //显示弹出层
       for (let i of sData.value) {
-
         if (i.id === _id.value) {
           //设置弹出层input显示的值
           curTeacherName.value = i.name
-          curSelValue.value = i.staff
+          curSelValue.value = i.staff_id
           //根据老师类型设置单选框默认选择
           if (i.role === '老师') {
             curRadioValue.value = 'no'
@@ -260,51 +259,30 @@ export default defineComponent({
     //处理弹出层点击ok
     const modifyPassSuccess = ref(true)
     const handleOk = () => {
-      for (let i in sData.value) {
-        if (sData.value[i].id === _id.value) {
-          //修改源数据对应的值
-          //是否修改了教研室
-          // if (selTeacherSection.value !== '') {
-          //   sData.value[i].staff = selTeacherSection.value
-          // }
-          // //是否修改了教研室管理人员
-          // if (isTeacherSectionAdmin.value !== '') {
-          //   if (isTeacherSectionAdmin.value === 'no') {
-          //     sData.value[i].role = '老师'
-          //   } else if (isTeacherSectionAdmin.value === 'yes') {
-          //     sData.value[i].role = '教研室主任'
-          //   }
-          //   isTeacherSectionAdmin.value = ''
-          // }
-          //默认重新获取老师名并且修改
-          // sData.value[i].name = curTeacherName.value
-          //是否修改了密码
-          if (curTeacherPass.value !== '') {
-            //  在这修改该老师密码
-            proxy.$api.get(
-                '/updPassword',
-                {},
-                {'id':parseInt(_id.value),'password':curTeacherPass.value},
-                (success)=>{
-                  if(success.data.error == 2){
-                    message.error('密码与原密码一致');
-                    modifyPassSuccess.value = false
-                  }else if(success.data.error == 1){
-                    message.error('修改密码失败');
-                    modifyPassSuccess.value = false
-                  }
-                },
-                (error)=>{
-
-                }
-            )
-            curTeacherPass.value = ''
-          }
-
-          message.success('修改成功')
-          showModifyM.value = false
-        }
+      let newTeacherType = ''
+      if (curRadioValue.value === 'no'){
+        newTeacherType = '老师'
+      }else if (curRadioValue.value === 'yes'){
+        newTeacherType = '教研室主任'
       }
+      proxy.$api.get(
+          '/updTeacher',
+          {},
+          {'id':parseInt(_id.value),'name':curTeacherName.value,'staff_id':parseInt(curSelValue.value),'role_name':newTeacherType,'password':curTeacherPass.value},
+          (success)=>{
+            sData.value.splice(0,sData.value.length)
+            for (let i in success.data.data) {
+              let id = success.data.data[i].id
+              success.data.data[i].key = id.toString()
+              sData.value.push(success.data.data[i])
+            }
+            message.success('修改成功');
+           showModifyM.value = false
+          },
+          (error)=>{
+
+          }
+      )
 
     };
     //确认删除

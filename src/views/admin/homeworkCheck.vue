@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination"
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
@@ -30,26 +30,8 @@
     <template #operation="{ record }">
       <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleSee(record.key)">查看
       </a-button>
-      <a-modal v-model:visible="record.isShow" title="查看学期作业检查项" @ok="handleOk()" okText="确认" cancelText="取消"
-               width="80%">
-        <a-table :columns="columns2" :data-source="itemData" :scroll="{ x: 1200, y: 300 }"
-                 :pagination="pagination" :rowKey="itemData.key">
-          <template #operation="{ record }">
-            <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.key)">
-              修改
-            </a-button>
-            <a-popconfirm
-                    title="是否要删除？"
-                    ok-text="是"
-                    cancel-text="否"
-                    @confirm="itemConfirm(record.key)"
-            >
-              <a-button type="danger">删除</a-button>
-            </a-popconfirm>
-          </template>
-        </a-table>
-      </a-modal>
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleExport(record.key)">导出
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}">
+        <a :href="handleExport(record.key)" target="_blank">导出</a>
       </a-button>
       <a-popconfirm
               title="是否要删除？"
@@ -61,7 +43,25 @@
       </a-popconfirm>
     </template>
   </a-table>
-
+  <a-modal v-model:visible="showHomeItem" title="查看学期作业检查项" @ok="handleOk()" okText="确认" cancelText="取消"
+           width="80%">
+    <a-table :columns="columns2" :data-source="itemData" :scroll="{ x: 1200}"
+             :pagination="pagination">
+      <template #operation="{ record }">
+        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.key)">
+          修改
+        </a-button>
+        <a-popconfirm
+                title="是否要删除？"
+                ok-text="是"
+                cancel-text="否"
+                @confirm="itemConfirm(record.key)"
+        >
+          <a-button type="danger">删除</a-button>
+        </a-popconfirm>
+      </template>
+    </a-table>
+  </a-modal>
   <a-modal v-model:visible="showModify" title="修改学期作业检查项" @ok="handleModifyOk()" okText="确认" cancelText="取消"
            width="40%">
     <label>周课时及实习周数:</label>
@@ -88,7 +88,7 @@
       <label>教研室</label>
       <a-select style="width: 100%;margin-bottom: 4px" @change="handleModifySelect"
                 v-model:value="curSelValue">
-        <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.name">
+        <a-select-option v-for="(item,index) in sectionData" :key="item.id" :value="item.id">
           {{ item.name }}
         </a-select-option>
       </a-select>
@@ -97,18 +97,19 @@
 </template>
 
 <script lang="ts">
-  import {defineComponent, reactive, ref, Ref} from 'vue';
+  import {defineComponent, reactive, ref, Ref,onMounted,getCurrentInstance,computed} from 'vue';
   import {message} from 'ant-design-vue';
   import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue';
 
   //设置接收数据的接口
   interface TableDataType {
     key: string;
-    date: string;
+    id:number;
+    created_at: string;
     term: string;
-    teachingSection: string;
-    examiner: string;
-    isShow?: boolean;
+    staff: string;
+    teacher_id: number;
+    teacher: string;
   }
 
   export default defineComponent({
@@ -126,76 +127,42 @@
         pageSize: 5
       };
       //模拟数据，使用TableDataType接口验证数据
-      const data: Ref<TableDataType[]> = ref([
-        {
-          key: '1',
-          date: "2021-07-05",
-          term: '2020-2021学年度 第2学期',
-          teachingSection: '网络教研室',
-          examiner: '',
-          isShow: false,
-        },
-        {
-          key: '2',
-          date: "2021-07-06",
-          term: '2020-2021学年度 第2学期',
-          teachingSection: '系办教研室',
-          examiner: '',
-        }
-      ]);
-      const itemData = ref([
-        {
-          key: '',
-          teacherName: '',
-          clazz: '',
-          courseName: '',
-          weeklyClazzHour: '',
-          assignHomeworkNum: '',
-          corHomeworkNum: '',
-          internship: '',
-          orderHomeworkNum: '',
-          evaluate: ''
-        },
-      ])
+      const {proxy}:any = getCurrentInstance()
+      const sData: Ref<TableDataType[]> = ref([]);
+
       //教研室
-      const sectionData = ref([
-        {
-          id: '1',
-          name: '系办教研室'
-        },
-        {
-          id: '2',
-          name: '网络教研室'
-        },
-        {
-          id: '3',
-          name: '商务教研室'
-        },
-        {
-          id: '4',
-          name: '会计教研室'
-        },
-        {
-          id: '5',
-          name: '灯饰教研室'
-        },
-        {
-          id: '6',
-          name: '环艺教研室'
-        },
-        {
-          id: '7',
-          name: '专业基础教研室'
-        },
-        {
-          id: '8',
-          name: '美容教研室'
-        },
-        {
-          id: '9',
-          name: '行政部门教研室'
-        },
-      ]);
+      const sectionData:any = ref([]);
+      onMounted(()=>{
+        proxy.$api.get(
+            '/getStaff',
+            {},
+            {},
+            (success) => {
+              for (let i in success.data.data) {
+                sectionData.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
+              console.log(error);
+            }
+        )
+        proxy.$api.get(
+            '/getHomeworkCheck',
+            {},
+            {},
+            (success) => {
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                sData.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
+              console.log(error);
+            }
+        )
+      })
       //搜索框状态
       const state = reactive({
         searchText: '',
@@ -205,9 +172,9 @@
       const columns = [
         {
           title: '日期',
-          dataIndex: 'date',
+          dataIndex: 'created_at',
           defaultSortOrder: 'false',
-          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.date) - Date.parse(b.date),
+          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.created_at) - Date.parse(b.created_at),
         },
         {
           title: '学期',
@@ -229,14 +196,14 @@
         },
         {
           title: '教研室',
-          dataIndex: 'teachingSection',
+          dataIndex: 'staff',
           slots: {
             filterDropdown: 'filterDropdown',
             filterIcon: 'filterIcon',
             customRender: 'customRender',
           },
           onFilter: (value: string, record: TableDataType) =>
-              record.teachingSection.toString().toLowerCase().includes(value.toLowerCase()),
+              record.staff.toString().toLowerCase().includes(value.toLowerCase()),
           onFilterDropdownVisibleChange: (visible: any) => {
             if (visible) {
               setTimeout(() => {
@@ -247,14 +214,14 @@
         },
         {
           title: '检查人',
-          dataIndex: 'examiner',
+          dataIndex: 'teacher',
           slots: {
             filterDropdown: 'filterDropdown',
             filterIcon: 'filterIcon',
             customRender: 'customRender',
           },
           onFilter: (value: string, record: TableDataType) =>
-              record.examiner.toString().toLowerCase().includes(value.toLowerCase()),
+              record.teacher_id.toString().toLowerCase().includes(value.toLowerCase()),
           onFilterDropdownVisibleChange: (visible: any) => {
             if (visible) {
               setTimeout(() => {
@@ -270,14 +237,14 @@
         },
       ];
       const columns2 = [
-        {title: '教师姓名', width: 100, dataIndex: 'teacherName', key: 'teacherName', fixed: 'left', align: 'center'},
-        {title: '授课班级', dataIndex: 'clazz', key: 'clazz', width: 200, fixed: 'left', align: 'center'},
-        {title: '课程名称', dataIndex: 'courseName', key: 'courseName', width: 100, fixed: 'left', align: 'center'},
-        {title: '周课时及实习周数', dataIndex: 'weeklyClazzHour', key: 'weeklyClazzHour', width: 150, align: 'center'},
-        {title: '布置书面作业次数', dataIndex: 'assignHomeworkNum', key: 'assignHomeworkNum', width: 150, align: 'center'},
-        {title: '批改书面作业次数', dataIndex: 'corHomeworkNum', key: 'corHomeworkNum', width: 150, align: 'center'},
-        {title: '实习（验）报告（个）', dataIndex: 'internship', key: 'internship', width: 160, align: 'center'},
-        {title: '其他作业批改次数', dataIndex: 'orderHomeworkNum', key: 'orderHomeworkNum', width: 150, align: 'center'},
+        {title: '教师姓名', width: 100, dataIndex: 'teacher', key: 'teacher', fixed: 'left', align: 'center'},
+        {title: '授课班级', dataIndex: 'clazz', key: 'clazz', width: 125, fixed: 'left', align: 'center'},
+        {title: '课程名称', dataIndex: 'course', key: 'course', width: 130, fixed: 'left', align: 'center'},
+        {title: '周课时及实习周数', dataIndex: 'weekly_class_hour', key: 'weekly_class_hour', width: 150, align: 'center'},
+        {title: '布置书面作业次数', dataIndex: 'assign_homework_number', key: 'assign_homework_number', width: 150, align: 'center'},
+        {title: '批改书面作业次数', dataIndex: 'correcting_homework_number', key: 'correcting_homework_number', width: 150, align: 'center'},
+        {title: '实习（验）报告（个）', dataIndex: 'internship', key: 'internship', width: 200, align: 'center'},
+        {title: '其他作业批改次数', dataIndex: 'other_homework_number', key: 'other_homework_number', width: 150, align: 'center'},
         {title: '评价', dataIndex: 'evaluate', key: 'evaluate', width: 100, align: 'center'},
         {
           title: '操作',
@@ -288,6 +255,7 @@
           slots: {customRender: 'operation'},
         },
       ];
+      const showHomeItem = ref(false)
       //处理搜索结果
       const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any) => {
         confirm();
@@ -303,70 +271,53 @@
       const _key = ref()
       const curSelValue = ref('')
       const showModify = ref(false)
-      const handleSee = (key: string) => {
-        itemData.value.splice(0, itemData.value.length)
-        for (let i in data.value) {
-          if (data.value[i].key === data.value[0].key) data.value[i].isShow = true
-        }
+      //确认删除
+      const confirm = (key: string) => {
+        proxy.$api.get(
+            '/delHomeworkCheck',
+            {},
+            {'id':parseInt(key)},
+            (success)=>{
+              if (success.data.error === 0) {
+                sData.value.splice(0, sData.value.length)
+                for (let i in success.data.data) {
+                  let id = success.data.data[i].id
+                  success.data.data[i].key = id.toString()
+                  success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                  sData.value.push(success.data.data[i])
+                }
+                message.success('删除成功')
+              } else {
+                message.success('删除失败')
+              }
+            },
+            (error)=>{
 
-        //在这进行数据请求///////////////////////////////////////////////////////////
-        if (key === '1') {
-          const getData = [
-            {
-              key: '1',
-              teacherName: '郑镇耿',
-              clazz: '193计网502',
-              courseName: 'LINUX服务器管理(下)',
-              weeklyClazzHour: '1',
-              assignHomeworkNum: '1',
-              corHomeworkNum: '',
-              internship: '',
-              orderHomeworkNum: '',
-              evaluate: ''
+            }
+        )
+      };
+      const handleExport = computed(()=>(id)=>{
+        return 'http://119.29.185.52:9001/exportHCI?id='+parseInt(id);
+      })
+      const itemData:any = ref([])
+      const handleSee = (key: string) => {
+        showHomeItem.value = true
+        proxy.$api.get(
+            '/getHomeworkCheckItem',
+            {},
+            {'id':parseInt(key)},
+            (success)=>{
+              itemData.value.splice(0, itemData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                itemData.value.push(success.data.data[i])
+              }
             },
-            {
-              key: '2',
-              teacherName: '刘杨',
-              clazz: '203计网502',
-              courseName: 'WIN SERVER 2016',
-              weeklyClazzHour: '',
-              assignHomeworkNum: '',
-              corHomeworkNum: '',
-              internship: '',
-              orderHomeworkNum: '',
-              evaluate: ''
-            },
-          ]
-          itemData.value = getData
-        } else {
-          const getData2 = [
-            {
-              key: '1',
-              teacherName: '王景奇',
-              clazz: '',
-              courseName: '就业指导',
-              weeklyClazzHour: '',
-              assignHomeworkNum: '',
-              corHomeworkNum: '',
-              internship: '',
-              orderHomeworkNum: '',
-              evaluate: ''
-            },
-            {
-              key: '2',
-              teacherName: '钟春深',
-              clazz: '',
-              courseName: '图形创意',
-              weeklyClazzHour: '',
-              assignHomeworkNum: '',
-              corHomeworkNum: '',
-              internship: '',
-              orderHomeworkNum: '',
-              evaluate: ''
-            },
-          ]
-          itemData.value = getData2
-        }
+            (error)=>{
+
+            }
+        )
       }
       //处理修改函数，传入key值
       const weeklyClazzHour = ref('')
@@ -381,36 +332,61 @@
         //显示弹出层
         for (let i = 0; i < itemData.value.length; i++) {
           if (itemData.value[i].key === _key.value) {
-            weeklyClazzHour.value = itemData.value[i].weeklyClazzHour
-            assignHomeworkNum.value = itemData.value[i].assignHomeworkNum
-            corHomeworkNum.value = itemData.value[i].corHomeworkNum
+            weeklyClazzHour.value = itemData.value[i].weekly_class_hour
+            assignHomeworkNum.value = itemData.value[i].assign_homework_number
+            corHomeworkNum.value = itemData.value[i].correcting_homework_number
             internship.value = itemData.value[i].internship
-            orderHomeworkNum.value = itemData.value[i].orderHomeworkNum
+            orderHomeworkNum.value = itemData.value[i].other_homework_number
             evaluateVal.value = itemData.value[i].evaluate
           }
         }
       }
       const handleModifyOk = () => {
-        //在这进行数据修改上传数据库//////////////////////////////////////////////
-        for (let i = 0; i < itemData.value.length; i++) {
-          if (itemData.value[i].key === _key.value) {
-            itemData.value[i].weeklyClazzHour = weeklyClazzHour.value
-            itemData.value[i].assignHomeworkNum = assignHomeworkNum.value
-            itemData.value[i].corHomeworkNum = corHomeworkNum.value
-            itemData.value[i].internship = internship.value
-            itemData.value[i].orderHomeworkNum = orderHomeworkNum.value
-            itemData.value[i].evaluate = evaluateVal.value
-          }
-        }
-        showModify.value = false
-      }
+        proxy.$api.get(
+            '/updHomeworkCheckItem',
+            {},
+            {'id':parseInt(_key.value),'weekly_class_hour':weeklyClazzHour.value,'assign_homework_number':assignHomeworkNum.value,'correcting_homework_number':corHomeworkNum.value,'internship':internship.value,'other_homework_number':orderHomeworkNum.value,'evaluate':evaluateVal.value},
+            (success)=>{
+              if (success.data.error === 0){
+                for (let i = 0; i < itemData.value.length; i++) {
+                  if (itemData.value[i].key === _key.value) {
+                    itemData.value[i].weekly_class_hour = weeklyClazzHour.value
+                    itemData.value[i].assign_homework_number = assignHomeworkNum.value
+                    itemData.value[i].correcting_homework_number = corHomeworkNum.value
+                    itemData.value[i].internship = internship.value
+                    itemData.value[i].other_homework_number = orderHomeworkNum.value
+                    itemData.value[i].evaluate = evaluateVal.value
+                  }
+                }
+                message.success('修改成功')
+                showModify.value = false
+              }
+            },
+            (error)=>{
 
+            }
+        )
+      }
+      /*删除*/
       const itemConfirm = (key:string) =>{
-        itemData.value = itemData.value.filter(item=>item.key != key)
-      }
-      const handleExport = (key: string) => {
+        proxy.$api.get(
+            '/delHomeworkCheckItem',
+            {},
+            {'id':parseInt(key)},
+            (success)=>{
+              if (success.data.error === 0) {
+                itemData.value = itemData.value.filter(item => item.key != key)
+                message.success('删除成功')
+              } else {
+                message.success('删除失败')
+              }
+            },
+            (error)=>{
 
+            }
+        )
       }
+
       //获取选择的教研室
       const selDepartment = ref('')
       const handleModifySelect = (value: string) => {
@@ -418,14 +394,7 @@
       };
       //处理弹出层点击ok
       const handleOk = () => {
-        for (let i in data.value) {
-          data.value[0].isShow = false
-        }
-      };
-      //确认删除
-      const confirm = (key: string) => {
-        data.value = data.value.filter(item => item.key !== key)
-        message.success('删除成功');
+        showHomeItem.value = false
       };
       //第二个弹出层默认为否
       const visibleTwo = ref(false);
@@ -443,8 +412,8 @@
           return false
         }
         const isTeachingSec = ref(false)
-        for (let i = 0;i<data.value.length;i++){
-          if (data.value[i].teachingSection === curSelValue.value){
+        for (let i = 0;i<sData.value.length;i++){
+          if (sData.value[i].staff === curSelValue.value){
             isTeachingSec.value = true
           }
         }
@@ -452,34 +421,33 @@
           message.error('该教研室已存在')
           return false
         }
-        //模拟添加/////////////////////////////////////////////////////
-        let now = new Date();
-        let year = now.getFullYear();
-        let month = now.getMonth() + 1;
-        let day = now.getDate();
-        let clock = year + "-";
-        if (month < 10)
-          clock += "0";
-        clock += month + "-";
-        if (day < 10)
-          clock += "0";
-        clock += day + " ";
-        const newHCheck = {
-          key: Date.now().toString(),
-          date: clock.toString(),
-          term: '2020-2021学年度 第2学期',
-          teachingSection: curSelValue.value,
-          examiner: '',
-        }
-        //向源数据追加
-        data.value.push(newHCheck)
-        message.success('添加成功')
+        proxy.$api.get(
+            '/addHomeworkCheck',
+            {},
+            {'staff_id':curSelValue.value},
+            (success)=>{
+              if (success.data.error === 0) {
+                sData.value.splice(0, sData.value.length)
+                for (let i in success.data.data) {
+                  let id = success.data.data[i].id
+                  success.data.data[i].key = id.toString()
+                  success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                  sData.value.push(success.data.data[i])
+                }
+                message.success('添加成功')
+              } else {
+                message.success('添加失败')
+              }
+            },
+            (error)=>{
+
+            }
+        )
         curSelValue.value = ''
         visibleTwo.value = false;
-
       }
       return {
-        data,
+        sData,
         columns,
         handleSearch,
         handleReset,
@@ -506,14 +474,15 @@
         orderHomeworkNum,
         evaluateVal,
         handleModifyOk,
-        itemConfirm
+        itemConfirm,
+        showHomeItem
       };
     },
   });
 </script>
 
 <style>
-  .ant-modal-mask {
-    background-color: rgba(0, 0, 0, 0.3);
+  .ant-spin-container .ant-table-fixed-left .ant-table-tbody > tr{
+    height: 107px !important;
   }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination">
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
         <a-input
@@ -33,7 +33,7 @@
   <a-modal v-model:visible="showAllItem" title="查看授课情况表" @ok="handleSeeOk()" okText="确认" cancelText="取消" width="70%">
     <a-table :columns="columns2" :data-source="itemData" :pagination="pagination">
       <template #operation="{ record }">
-        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.id)">
+        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.teaching_plan_check_item_id)">
           修改
         </a-button>
       </template>
@@ -58,14 +58,18 @@
 </template>
 
 <script lang="ts">
-  import {defineComponent, ref, reactive, UnwrapRef, Ref} from 'vue';
+  import {defineComponent, ref, reactive, UnwrapRef, Ref,onMounted,getCurrentInstance} from 'vue';
   import {message} from 'ant-design-vue';
   import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue';
+  import $store from "../../store/index"
   interface TableDataType {
     key: string;
     id: number;
-    date: string;
+    created_at: string;
     term: string;
+    term_id: number;
+    teacher_id: number;
+    teacher: string;
   }
   export default defineComponent({
     name: "teachingPlanCheck",
@@ -90,20 +94,34 @@
 
       /*第一个弹出层*/
       //模拟数据，使用TableDataType接口验证数据
-      const data: Ref<TableDataType[]> = ref([
-        {
-          key: '1',
-          id: 1,
-          date: '2021-06-26',
-          term: '2020-2021学年度 第2学期',
-        }
-      ]);
+      const sData: Ref<TableDataType[]> = ref([]);
+
+      const {proxy}:any = getCurrentInstance()
+      onMounted(()=>{
+        proxy.$api.get(
+            '/teachingPlanItem',
+            {},
+            {'id':$store.state.userInfo.id},
+            (success)=>{
+              sData.value.splice(0, sData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                sData.value.push(success.data.data[i])
+              }
+            },
+            (error)=>{
+
+            }
+        )
+      })
       //设置表头及字段排序或字段搜索
       const columns = [
         {
           title: '日期',
-          dataIndex: 'date',
-          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.date) - Date.parse(b.date)
+          dataIndex: 'created_at',
+          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.created_at) - Date.parse(b.created_at)
         },
         {
           title: '学期',
@@ -130,38 +148,10 @@
         },
       ];
       const showAllItem = ref(false);
-      const handleCheck = (key:string) =>{
-        showAllItem.value = true
-      }
-
       /*第二个弹出层*/
-      const itemData = ref([
-        {
-          key:'1',
-          id:1,
-          tpc:20,
-          course:'短视频制作',
-          clazz:'',
-          planProgress:'',
-          actualProgress:'',
-          compare:'',
-          reason:'',
-        },
-        {
-          key:'2',
-          id:2,
-          tpc:20,
-          course:'商品摄影',
-          clazz:'',
-          planProgress:'',
-          actualProgress:'',
-          compare:'',
-          reason:'',
-        },
-      ])
       const columns2 = [
-        {title: '课程',  dataIndex: 'course', key: 'course',width: 150},
-        {title: '班级', dataIndex: 'clazzName', key: 'clazzName', width: 100},
+        {title: '课程',  dataIndex: 'name', key: 'name',width: 150},
+        {title: '班级', dataIndex: 'clazz', key: 'clazz', width: 100},
         {
           title: '操作',
           dataIndex: 'operation',
@@ -170,6 +160,28 @@
           slots: {customRender: 'operation'},
         },
       ];
+      const itemData:any = ref([])
+      const handleCheck = () =>{
+        proxy.$api.get(
+            '/getTPlanCheckItem',
+            {},
+            {'id':$store.state.userInfo.id},
+            (success)=>{
+              itemData.value.splice(0, itemData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].clazz = success.data.data[i].clazz.join("，")
+                itemData.value.push(success.data.data[i])
+              }
+
+              showAllItem.value = true
+            },
+            (error)=>{}
+        )
+      }
+
+
       const handleSeeOk = () =>{
         showAllItem.value = false
       }
@@ -184,9 +196,9 @@
       const handleModify = (key:number) =>{
         _id.value = key
         for (let i in itemData.value) {
-          if (itemData.value[i].id === _id.value) {
-            planProgress.value = itemData.value[i].planProgress
-            actualProgress.value = itemData.value[i].actualProgress
+          if (itemData.value[i].teaching_plan_check_item_id === _id.value) {
+            planProgress.value = itemData.value[i].plan_progress
+            actualProgress.value = itemData.value[i].actual_progress
             compare.value = itemData.value[i].compare
             reason.value = itemData.value[i].reason
           }
@@ -194,20 +206,33 @@
         showSetItem.value = true
       }
       const handleModifyOk = () =>{
-        for (let i in itemData.value) {
-          if (itemData.value[i].id === _id.value) {
-            itemData.value[i].planProgress = planProgress.value
-            itemData.value[i].actualProgress = actualProgress.value
-            itemData.value[i].compare = compare.value
-            itemData.value[i].reason = reason.value
-          }
-        }
-        showSetItem.value = false
+        console.log(parseInt(_id.value));
+        proxy.$api.get(
+            '/updTPlanCheckItem',
+            {},
+            {id:parseInt(_id.value),'plan_progress':planProgress.value,'actual_progress':actualProgress.value,'compare':compare.value,'reason':reason.value},
+            (success)=>{
+              if (success.data.error === 0) {
+                for (let i in itemData.value) {
+                  if (itemData.value[i].key === _id.value) {
+                    itemData.value[i].plan_progress = planProgress.value
+                    itemData.value[i].actual_progress = actualProgress.value
+                    itemData.value[i].compare = compare.value
+                    itemData.value[i].reason = reason.value
+                  }
+                }
+                showSetItem.value = false
+              }
+            },
+            (error)=>{
+
+            }
+        )
       }
 
 
       return {
-        data,
+        sData,
         columns,
         pagination,
         handleCheck,

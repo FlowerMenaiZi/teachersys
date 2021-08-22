@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination">
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
         <a-input
@@ -28,23 +28,6 @@
     </template>
     <template #operation="{ record }">
       <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleCheck(record.key)">查看</a-button>
-      <a-modal v-model:visible="record.isShow" title="查看晚修检查项" @ok="handleOk()" okText="确认" cancelText="取消" width="80%">
-        <a-table :columns="columns2" :data-source="itemData" :scroll="{ x: 1200, y: 300 }"
-                 :pagination="pagination" :rowKey="record.insItems.key">
-          <template #operation="{ record }">
-            <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.key,record.fKey)">
-              修改
-            </a-button>
-            <a-popconfirm
-                    title="是否要删除？"
-                    ok-text="是"
-                    cancel-text="否"
-                    @confirm="itemConfirm(record.key,record.fKey)">
-              <a-button type="danger">删除</a-button>
-            </a-popconfirm>
-          </template>
-        </a-table>
-      </a-modal>
       <a-popconfirm
               title="是否要删除？"
               ok-text="是"
@@ -54,10 +37,27 @@
       </a-popconfirm>
     </template>
   </a-table>
+  <a-modal v-model:visible="showAllItem" title="查看晚修检查项" @ok="handleOk()" okText="确认" cancelText="取消" width="80%">
+    <a-table :columns="columns2" :data-source="itemData" :scroll="{ x: 1200}"
+             :pagination="pagination" :rowKey="itemData.key">
+      <template #operation="{ record }">
+        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.key)">
+          修改
+        </a-button>
+        <a-popconfirm
+                title="是否要删除？"
+                ok-text="是"
+                cancel-text="否"
+                @confirm="itemConfirm(record.key)">
+          <a-button type="danger">删除</a-button>
+        </a-popconfirm>
+      </template>
+    </a-table>
+  </a-modal>
   <a-modal v-model:visible="showSetItem" title="修改晚修检查项" @ok="handleV3Ok()"
            okText="确认" cancelText="取消" width="500px">
     <label>教室：</label>
-    <a-input-number placeholder="请输入教室名" style="width:100%;margin-bottom: 10px" v-model:value="clazz"></a-input-number>
+    <a-input-number placeholder="请输入教室名" style="width:100%;margin-bottom: 10px" v-model:value="room"></a-input-number>
     <label>应到人数：</label>
     <a-input-number placeholder="请输入应到人数" style="width:100%;margin-bottom: 10px"
                     v-model:value="sArriveNumOfPeople"></a-input-number>
@@ -106,7 +106,8 @@
   <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleAdd">新增
     <a-modal v-model:visible="visibleTwo" title="新增晚修检查表" @ok="handleAddOk" okText="确认" cancelText="取消">
       <label>日期:</label>
-      <a-date-picker style="width: 100%;margin-bottom: 10px" placeholder="请选择日期" :format="format" @change="onDateChange" :showToday="false"/>
+      <a-date-picker style="width: 100%;margin-bottom: 10px" placeholder="请选择日期" :format="format" @change="onDateChange"
+                     :showToday="false"/>
       <label>第几周:</label>
       <a-input-number placeholder="第几周" style="width: 100%;margin-bottom: 10px" :max="20"
                       v-model:value="weekly"></a-input-number>
@@ -118,7 +119,7 @@
               style="width: 100%;margin-bottom: 10px"
               v-model:value="curTeacherName"
       >
-        <a-select-option v-for="(item,index) in teachers" :value="item.name" :key="item.key">
+        <a-select-option v-for="(item,index) in teachers" :value="item.id" :key="item.key">
           {{ item.name }}
         </a-select-option>
       </a-select>
@@ -130,8 +131,8 @@
               placeholder="请选择班级"
               @change="handleClazzChange"
       >
-        <a-select-option v-for="i in allClazz" :key="i.key">
-          {{i.clazz}} - {{i.clazzRoom}}
+        <a-select-option v-for="(i,index) in allClazz" :key="i.key">
+          {{i.name}} - {{i.room}}
         </a-select-option>
       </a-select>
     </a-modal>
@@ -139,18 +140,23 @@
   <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleExport">导出某日数据
     <a-modal v-model:visible="visibleThree" title="导出" @ok="handleExportOk" okText="确认" cancelText="取消">
       <label>日期:</label>
-      <a-date-picker style="width: 100%;margin-bottom: 10px" placeholder="请选择日期" :format="format" @change="onExportDateChange" :showToday="false"/>
+      <a-date-picker style="width: 100%;margin-bottom: 10px" placeholder="请选择日期" :format="format"
+                     @change="onExportDateChange" :showToday="false"/>
+    </a-modal>
+    <a-modal v-model:visible="visibleFour" title="下载" okText="确认" cancelText="取消" @ok="handleDownLoadOk">
+      <a :href="handleExportLink" target="_blank">下载</a>
     </a-modal>
   </a-button>
 </template>
 
 <script lang="ts">
-  import {defineComponent, ref, reactive, UnwrapRef, Ref} from 'vue';
+  import {defineComponent, ref, reactive, UnwrapRef, Ref, onMounted, getCurrentInstance, computed} from 'vue';
   import {message} from 'ant-design-vue';
   import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue';
   import {Moment} from 'moment';
   import moment from 'moment'
   import 'moment/locale/zh-cn'
+
   moment.locale('zh-cn')
 
   //设置接收数据的接口
@@ -158,10 +164,9 @@
     key: string;
     id: number;
     date: string;
-    teacherOnDuty: string;
-    checkConfirmTime: string;
-    insItems: any;
-    isShow?: boolean;
+    teacher: string;
+    teacher_id: number;
+    check_at: string;
   }
 
 
@@ -180,116 +185,58 @@
         pageSize: 5
       };
       //模拟数据，使用TableDataType接口验证数据
-      const data: Ref<TableDataType[]> = ref([
-        {
-          key: '1',
-          id: 1,
-          date: '2021-06-26',
-          teacherOnDuty: '王景奇',
-          checkConfirmTime: '',
-          isShow: false,
-          insItems: [
-            {
-              key: '1',
-              fKey: '1',
-              clazzName: '183计网502',
-              clazz: 1301,
-              sArriveNumOfPeople: 54,
-              numOfPeopleStayOut: null,
-              leave: null,
-              absent: null,
-              studentCadres: null,
-              numOfAssociation: 8,
-              actualNumber: 46,
-              numOfPeopleNotArrived: 8,
-              numberScore: 17,
-              clazzDisScore: 30,
-              learnAtmScore: 40,
-              clazzHygieneScore: 10,
-              totalScore: null,
-              evaluate: null,
-              shiftManagerCon: null,
-              teacherOnDutyCon: null,
-            },
-            {
-              key: '2',
-              fKey: '1',
-              clazzName: '183云计算502',
-              clazz: 1302,
-              sArriveNumOfPeople: null,
-              numOfPeopleStayOut: null,
-              leave: null,
-              absent: null,
-              studentCadres: null,
-              numOfAssociation: null,
-              actualNumber: null,
-              numOfPeopleNotArrived: null,
-              numberScore: null,
-              clazzDisScore: null,
-              learnAtmScore: null,
-              clazzHygieneScore: null,
-              totalScore: null,
-              evaluate: null,
-              shiftManagerCon: null,
-              teacherOnDutyCon: null,
-            }
-          ]
-        },
-        {
-          key: '2',
-          id: 2,
-          date: '2021-06-27',
-          teacherOnDuty: '吴振庭',
-          checkConfirmTime: '',
-          insItems: [
-            {
-              key: '1',
-              fKey: '2',
-              clazzName: '183商务512',
-              clazz: 1303,
-              sArriveNumOfPeople: null,
-              numOfPeopleStayOut: null,
-              leave: null,
-              absent: null,
-              studentCadres: null,
-              numOfAssociation: null,
-              actualNumber: null,
-              numOfPeopleNotArrived: null,
-              numberScore: null,
-              clazzDisScore: null,
-              learnAtmScore: null,
-              clazzHygieneScore: null,
-              totalScore: null,
-              evaluate: null,
-              shiftManagerCon: null,
-              teacherOnDutyCon: null,
-            },
-            {
-              key: '2',
-              fKey: '2',
-              clazzName: '183商务522',
-              clazz: 1502,
-              sArriveNumOfPeople: null,
-              numOfPeopleStayOut: null,
-              leave: null,
-              absent: null,
-              studentCadres: null,
-              numOfAssociation: null,
-              actualNumber: null,
-              numOfPeopleNotArrived: null,
-              numberScore: null,
-              clazzDisScore: null,
-              learnAtmScore: null,
-              clazzHygieneScore: null,
-              totalScore: null,
-              evaluate: null,
-              shiftManagerCon: null,
-              teacherOnDutyCon: null,
-            }
-          ]
-        }
-      ]);
+      const sData: Ref<TableDataType[]> = ref([]);
+      const teachers: any = ref([])
+      const allClazz: any = ref([])
       const itemData: any = ref([])
+      const {proxy}: any = getCurrentInstance()
+      onMounted(() => {
+        proxy.$api.get(
+            '/getEvenCheck',
+            {},
+            {},
+            (success) => {
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                sData.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
+
+            }
+        )
+        proxy.$api.get(
+            '/getTeacher',
+            {},
+            {},
+            (success) => {
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                teachers.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
+
+            }
+        )
+        proxy.$api.get(
+            '/getClazz',
+            {},
+            {},
+            (success) => {
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                allClazz.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
+
+            }
+        )
+      })
       //搜索框状态
       const state = reactive({
         searchText: '',
@@ -305,9 +252,9 @@
             filterIcon: 'filterIcon',
             customRender: 'customRender',
           },
-          sorter: (a: TableDataType, b: TableDataType) =>Date.parse(a.date) - Date.parse(b.date),
+          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.date) - Date.parse(b.date),
           onFilter: (value: string, record: TableDataType) =>
-              record.date.toString().toLowerCase().includes(value.toLowerCase()),
+              record.check_at.toString().toLowerCase().includes(value.toLowerCase()),
           onFilterDropdownVisibleChange: (visible: any) => {
             if (visible) {
               setTimeout(() => {
@@ -318,14 +265,14 @@
         },
         {
           title: '值班老师',
-          dataIndex: 'teacherOnDuty',
+          dataIndex: 'teacher',
           slots: {
             filterDropdown: 'filterDropdown',
             filterIcon: 'filterIcon',
             customRender: 'customRender',
           },
           onFilter: (value: string, record: TableDataType) =>
-              record.teacherOnDuty.toString().toLowerCase().includes(value.toLowerCase()),
+              record.teacher.toString().toLowerCase().includes(value.toLowerCase()),
           onFilterDropdownVisibleChange: (visible: any) => {
             if (visible) {
               setTimeout(() => {
@@ -336,14 +283,14 @@
         },
         {
           title: '检查确认时间',
-          dataIndex: 'checkConfirmTime',
+          dataIndex: 'check_at',
           slots: {
             filterDropdown: 'filterDropdown',
             filterIcon: 'filterIcon',
             customRender: 'customRender',
           },
           onFilter: (value: string, record: TableDataType) =>
-              record.checkConfirmTime.toString().toLowerCase().includes(value.toLowerCase()),
+              record.check_at.toString().toLowerCase().includes(value.toLowerCase()),
           onFilterDropdownVisibleChange: (visible: any) => {
             if (visible) {
               setTimeout(() => {
@@ -359,24 +306,24 @@
         },
       ];
       const columns2 = [
-        {title: '班级名', width: 150, dataIndex: 'clazzName', key: 'clazzName', fixed: 'left', align: 'center'},
-        {title: '教室', dataIndex: 'clazz', key: 'clazz', width: 100, align: 'center'},
-        {title: '应到人数', dataIndex: 'sArriveNumOfPeople', key: 'sArriveNumOfPeople', width: 100, align: 'center'},
-        {title: '外宿人数', dataIndex: 'numOfPeopleStayOut', key: 'numOfPeopleStayOut', width: 100, align: 'center'},
-        {title: '请假', dataIndex: 'leave', key: 'leave', width: 100, align: 'center'},
-        {title: '缺席', dataIndex: 'absent', key: 'absent', width: 100, align: 'center'},
-        {title: '学生干部', dataIndex: 'studentCadres', key: 'studentCadres', width: 100, align: 'center'},
-        {title: '社团人数', dataIndex: 'numOfAssociation', key: 'numOfAssociation', width: 100, align: 'center'},
-        {title: '实到人数', dataIndex: 'actualNumber', key: 'actualNumber', width: 100, align: 'center'},
-        {title: '未到人数', dataIndex: 'numOfPeopleNotArrived', key: 'numOfPeopleNotArrived', width: 100, align: 'center'},
-        {title: '人数得分', dataIndex: 'numberScore', key: 'studentCadres', width: 100, align: 'center'},
-        {title: '课堂纪律得分', dataIndex: 'clazzDisScore', key: 'clazzDisScore', width: 120, align: 'center'},
-        {title: '学习氛围得分', dataIndex: 'learnAtmScore', key: 'learnAtmScore', width: 120, align: 'center'},
-        {title: '教室卫生得分', dataIndex: 'clazzHygieneScore', key: 'clazzHygieneScore', width: 120, align: 'center'},
-        {title: '总得分', dataIndex: 'totalScore', key: 'totalScore', width: 100, align: 'center'},
-        {title: '评价', dataIndex: 'evaluate', key: 'evaluate', width: 100, align: 'center'},
-        {title: '班干确认', dataIndex: 'shiftManagerCon', key: 'shiftManagerCon', width: 100, align: 'center'},
-        {title: '值班老师确认', dataIndex: 'teacherOnDutyCon', key: 'teacherOnDutyCon', width: 120, align: 'center'},
+        {title: '班级名', width: 150, dataIndex: 'clazz', key: 'clazz', fixed: 'left', align: 'center'},
+        {title: '教室', dataIndex: 'room', key: 'room', width: 100, align: 'center'},
+        {title: '应到人数', dataIndex: 'should_arrive_number', key: 'should_arrive_number', width: 100, align: 'center'},
+        {title: '外宿人数', dataIndex: 'goout_number', key: 'goout_number', width: 100, align: 'center'},
+        {title: '请假', dataIndex: 'leave_number', key: 'leave_number', width: 100, align: 'center'},
+        {title: '缺席', dataIndex: 'absent_number', key: 'absent_number', width: 100, align: 'center'},
+        {title: '学生干部', dataIndex: 'student_cadres_number', key: 'student_cadres_number', width: 100, align: 'center'},
+        {title: '社团人数', dataIndex: 'associations_number', key: 'associations_number', width: 100, align: 'center'},
+        {title: '实到人数', dataIndex: 'arrive_number', key: 'arrive_number', width: 100, align: 'center'},
+        {title: '未到人数', dataIndex: 'unarrive_number', key: 'unarrive_number', width: 100, align: 'center'},
+        {title: '人数得分', dataIndex: 'number_score', key: 'number_score', width: 100, align: 'center'},
+        {title: '课堂纪律得分', dataIndex: 'discipline_score', key: 'discipline_score', width: 120, align: 'center'},
+        {title: '学习氛围得分', dataIndex: 'atmosphere_score', key: 'atmosphere_score', width: 120, align: 'center'},
+        {title: '教室卫生得分', dataIndex: 'hygiene_score', key: 'hygiene_score', width: 120, align: 'center'},
+        {title: '总得分', dataIndex: 'total_score', key: 'total_score', width: 100, align: 'center'},
+        {title: '评价', dataIndex: 'appraise', key: 'appraise', width: 100, align: 'center'},
+        {title: '班干确认', dataIndex: 'clazz_check_at', key: 'clazz_check_at', width: 100, align: 'center'},
+        {title: '值班老师确认', dataIndex: 'teacher_check_at', key: 'teacher_check_at', width: 120, align: 'center'},
         {
           title: '操作',
           dataIndex: 'operation',
@@ -401,48 +348,64 @@
       const showSetItem = ref(false);
       //设置当前点击的值为空
       const curCourseValue = ref('')
-      //设置当前点击的key值为空
-      const _key = ref()
       const curClazzName = ref('')
       //处理修改函数，传入key值
+      const showAllItem = ref(false)
       const handleCheck = (key: string) => {
-        itemData.value.splice(0, itemData.value.length)
-        for (let i in data.value) {
-          if (data.value[i].key === key) {
-            for (let j in data.value[i].insItems) {
-              itemData.value.push(data.value[i].insItems[j])
-            }
-          }
-          if (data.value[i].key === data.value[0].key) data.value[i].isShow = true
+        proxy.$api.get(
+            '/getEvenCheckItem',
+            {},
+            {'id': parseInt(key)},
+            (success) => {
+              showAllItem.value = true
+              itemData.value.splice(0, itemData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                itemData.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
 
-        }
+            }
+        )
       }
       //处理弹出层点击ok
       const handleOk = () => {
-        for (let i in data.value) {
-          data.value[0].isShow = false
-        }
+        showAllItem.value = false
       };
       //确认删除
       const confirm = (key: string) => {
-        data.value = data.value.filter(item => item.key !== key)
-        message.success('删除成功');
+        proxy.$api.get(
+            '/delEvenCheck',
+            {},
+            {'id': parseInt(key)},
+            (success) => {
+              if (success.data.error === 0) {
+                sData.value = sData.value.filter(item => item.key !== key)
+
+                message.success('删除成功');
+              }
+            }
+        )
       };
 
-      const itemConfirm = (key: string, fKey: string) => {
-        console.log(key, fKey);
-        for (let i in itemData.value) {
-          itemData.value = itemData.value.filter((item: { key: string; }) => item.key !== key)
-        }
-        for (let i in data.value) {
-          if (data.value[i].key === fKey) {
-            data.value[i].insItems = data.value[i].insItems.filter((item: { key: string; }) => item.key !== key)
-          }
-        }
-        message.success('删除成功');
+      const itemConfirm = (key: string) => {
+        proxy.$api.get(
+            '/delEvenCheckItem',
+            {},
+            {'id': parseInt(key)},
+            (success) => {
+              if (success.data.error === 0) {
+                itemData.value = itemData.value.filter(item => item.key !== key)
+                message.success('删除成功');
+              }
+            }
+        )
+
       };
 
-      const clazz = ref('') //教室
+      const room = ref('') //教室
       const sArriveNumOfPeople = ref('') //应到人数
       const numOfPeopleStayOut = ref('') //
       const leave = ref('')
@@ -459,35 +422,30 @@
       const evaluate = ref('')
       const shiftManagerCon = ref('')
       const teacherOnDutyCon = ref('')
-      const curKey = ref('')
-      const curFKey = ref('')
-      const handleModify = (key: string, fKey: string) => {
-        curKey.value = key
-        curFKey.value = fKey
+      //设置当前点击的key值为空
+      const _key = ref()
+      const handleModify = (key: string) => {
         for (let i in itemData.value) {
           if (itemData.value[i].key === key) {
-            clazz.value = itemData.value[i].clazz
-            sArriveNumOfPeople.value = itemData.value[i].sArriveNumOfPeople
-            numOfPeopleStayOut.value = itemData.value[i].numOfPeopleStayOut
-            leave.value = itemData.value[i].leave
-            absent.value = itemData.value[i].absent
-            studentCadres.value = itemData.value[i].studentCadres
-            numOfAssociation.value = itemData.value[i].numOfAssociation
-            actualNumber.value = itemData.value[i].actualNumber
-            numOfPeopleNotArrived.value = itemData.value[i].numOfPeopleNotArrived
-            numberScore.value = itemData.value[i].numberScore
-            clazzDisScore.value = itemData.value[i].clazzDisScore
-            learnAtmScore.value = itemData.value[i].learnAtmScore
-            clazzHygieneScore.value = itemData.value[i].clazzHygieneScore
-            totalScore.value = itemData.value[i].totalScore
-            evaluate.value = itemData.value[i].evaluate
-            shiftManagerCon.value = itemData.value[i].shiftManagerCon
-            teacherOnDutyCon.value = itemData.value[i].teacherOnDutyCon
-            curKey.value = key
-            curFKey.value = fKey
-          }
-          if (itemData.value[i].key === itemData.value[0].key) {
+            _key.value = key
             showSetItem.value = true
+            room.value = itemData.value[i].room
+            sArriveNumOfPeople.value = itemData.value[i].should_arrive_number
+            numOfPeopleStayOut.value = itemData.value[i].goout_number
+            leave.value = itemData.value[i].leave_number
+            absent.value = itemData.value[i].absent_number
+            studentCadres.value = itemData.value[i].student_cadres_number
+            numOfAssociation.value = itemData.value[i].associations_number
+            actualNumber.value = itemData.value[i].arrive_number
+            numOfPeopleNotArrived.value = itemData.value[i].unarrive_number
+            numberScore.value = itemData.value[i].number_score
+            clazzDisScore.value = itemData.value[i].discipline_score
+            learnAtmScore.value = itemData.value[i].atmosphere_score
+            clazzHygieneScore.value = itemData.value[i].hygiene_score
+            totalScore.value = itemData.value[i].total_score
+            evaluate.value = itemData.value[i].appraise
+            shiftManagerCon.value = itemData.value[i].clazz_check_at
+            teacherOnDutyCon.value = itemData.value[i].teacher_check_at
           }
         }
       }
@@ -495,125 +453,82 @@
         totalScore.value = numberScore.value + clazzDisScore.value + learnAtmScore.value + clazzHygieneScore.value
       }
       const handleV3Ok = () => {
-        for (let i in data.value) {
-          if (data.value[i].key === curFKey.value) {
-            let itemData = data.value[i].insItems
-            for (let j of itemData) {
-              if (j.key === curKey.value) {
-                j.clazz = clazz.value
-                j.sArriveNumOfPeople = sArriveNumOfPeople.value
-                j.numOfPeopleStayOut = numOfPeopleStayOut.value
-                j.leave = leave.value
-                j.absent = absent.value
-                j.studentCadres = studentCadres.value
-                j.numOfAssociation = numOfAssociation.value
-                j.actualNumber = actualNumber.value
-                j.numOfPeopleNotArrived = numOfPeopleNotArrived.value
-                j.numberScore = numberScore.value
-                j.clazzDisScore = clazzDisScore.value
-                j.learnAtmScore = learnAtmScore.value
-                j.clazzHygieneScore = clazzHygieneScore.value
-                j.totalScore = totalScore.value
-                j.evaluate = evaluate.value
-                j.shiftManagerCon = shiftManagerCon.value
-                j.teacherOnDutyCon = teacherOnDutyCon.value
+
+        proxy.$api.get(
+            '/updEvenCheckItem',
+            {},
+            {
+              'id': parseInt(_key.value),
+              'room': room.value,
+              'should_arrive_number': sArriveNumOfPeople.value,
+              'goout_number': numOfPeopleStayOut.value,
+              'leave_number': leave.value,
+              'absent_number': absent.value,
+              'student_cadres_number': studentCadres.value,
+              'associations_number': numOfAssociation.value,
+              'arrive_number': actualNumber.value,
+              'unarrive_number': numOfPeopleNotArrived.value,
+              'number_score': numberScore.value,
+              'discipline_score': clazzDisScore.value,
+              'atmosphere_score': learnAtmScore.value,
+              'hygiene_score': clazzHygieneScore.value,
+              'total_score': totalScore.value,
+              'appraise': evaluate.value,
+              'clazz_check_at': shiftManagerCon.value,
+              'teacher_check_at': teacherOnDutyCon.value
+            },
+            (success) => {
+              if (success.data.error === 0) {
+                for (let j in itemData.value) {
+                  if (itemData.value[j].key == _key.value) {
+                    itemData.value[j].room = room.value
+                    itemData.value[j].should_arrive_number = sArriveNumOfPeople.value
+                    itemData.value[j].goout_number = numOfPeopleStayOut.value
+                    itemData.value[j].leave_number = leave.value
+                    itemData.value[j].absent_number = absent.value
+                    itemData.value[j].student_cadres_number = studentCadres.value
+                    itemData.value[j].associations_number = numOfAssociation.value
+                    itemData.value[j].arrive_number = actualNumber.value
+                    itemData.value[j].unarrive_number = numOfPeopleNotArrived.value
+                    itemData.value[j].number_score = numberScore.value
+                    itemData.value[j].discipline_score = clazzDisScore.value
+                    itemData.value[j].atmosphere_score = learnAtmScore.value
+                    itemData.value[j].hygiene_score = clazzHygieneScore.value
+                    itemData.value[j].total_score = totalScore.value
+                    itemData.value[j].appraise = evaluate.value
+                    itemData.value[j].clazz_check_at = shiftManagerCon.value
+                    itemData.value[j].teacher_check_at = teacherOnDutyCon.value
+                  }
+                }
+                showSetItem.value = false
               }
+            },
+            (error) => {
+
             }
-          }
-        }
-        showSetItem.value = false
+        )
+
       }
 
       //第二个弹出层默认为否
       const visibleTwo = ref(false);
       const visibleThree = ref(false);
       const selTime = ref('')
-      const teachers = ref([
-        {
-          key: '1',
-          id: 1,
-          name: '王景奇'
-        },
-        {
-          key: '2',
-          id: 2,
-          name: '钟春琛'
-        },
-        {
-          key: '3',
-          id: 3,
-          name: '邱垂章'
-        },
-        {
-          key: '4',
-          id: 4,
-          name: '刘献红'
-        },
-        {
-          key: '5',
-          id: 5,
-          name: '林德南'
-        },
-        {
-          key: '6',
-          id: 6,
-          name: '郝佩玉'
-        },
-        {
-          key: '7',
-          id: 7,
-          name: '付天义'
-        },
-        {
-          key: '8',
-          id: 8,
-          name: '刘杨'
-        },
-      ])
+
       const curTeacherName = ref('')
       const weekly = ref('')
       const whichToday = ref('')
-      const allClazz = ref([
-        {
-          key: '1',
-          id: 1,
-          clazz: '183计网502',
-          clazzRoom:'1301'
-        },
-        {
-          key: '2',
-          id: 2,
-          clazz: '183云计算502',
-          clazzRoom:'1302'
-        },
-        {
-          key: '3',
-          id: 3,
-          clazz: '183商务512',
-          clazzRoom:'1303'
-        },
-        {
-          key: '4',
-          id: 4,
-          clazz: '183商务522',
-          clazzRoom:'1503'
-        },
-      ])
       const curClazz = ref([])
       const format = 'YYYY-MM-DD'
 
       const onDateChange = (value: Moment[], dateString: string) => {
         selTime.value = dateString
       }
-      // const selTeacherChange = ref('')
-      // const handleTeacherChange = (value: string) => {
-      //   selTeacherChange.value = value
-      // };
-      const selClazzChange:any = ref([])
+      const selClazzChange: any = ref([])
       const handleClazzChange = (value: string[]) => {
-        selClazzChange.value.splice(0,selClazzChange.value.length)
-        for (let i =0;i<value.length;i++){
-          selClazzChange.value.push(allClazz.value[parseInt(value[i]) - 1])
+        selClazzChange.value.splice(0, selClazzChange.value.length)
+        for (let i in value) {
+          selClazzChange.value.push(parseInt(value[i]))
         }
       };
       //处理点击添加事件
@@ -628,7 +543,6 @@
       //处理添加弹出层的确认事件
       const handleAddOk = () => {
         //判断是否为空
-        // console.log(selTime.value);
         if (selTime.value === '') {
           message.error('请选择日期')
           return false
@@ -648,68 +562,71 @@
         if (selClazzChange.value === '') {
           message.error('请选择至少一个班级')
           return false
-        }else{
-          allClazz.value = selClazzChange.value
         }
-        const newItem:any = {
-          key: Date.now().toString(),
-          id: Date.now(),
-          date: selTime.value,
-          teacherOnDuty: curTeacherName.value,
-          checkConfirmTime: '',
-          isShow: false,
-          insItems: []
-        }
-        for (let i = 0;i<allClazz.value.length;i++){
-          const clazzItem:any = {
-            key: Math.floor((Math.random()*100000)+1).toString(),
-            fKey: newItem.key,
-            clazzName: allClazz.value[i].clazz,
-            clazz: allClazz.value[i].clazzRoom,
-            sArriveNumOfPeople: null,
-            numOfPeopleStayOut: null,
-            leave: null,
-            absent: null,
-            studentCadres: null,
-            numOfAssociation: null,
-            actualNumber: null,
-            numOfPeopleNotArrived: null,
-            numberScore: null,
-            clazzDisScore: null,
-            learnAtmScore: null,
-            clazzHygieneScore: null,
-            totalScore: null,
-            evaluate: null,
-            shiftManagerCon: null,
-            teacherOnDutyCon: null,
-          }
-          newItem.insItems.push(clazzItem)
-        }
-        data.value.push(newItem)
-        console.log(data.value);
-        message.success('添加成功')
-        visibleTwo.value = false;
+        proxy.$api.get(
+            '/addEvenCheck',
+            {},
+            {
+              'date': selTime.value,
+              'week': parseInt(weekly.value),
+              'day': parseInt(whichToday.value),
+              'teacher': parseInt(curTeacherName.value),
+              'clazz': selClazzChange.value,
+              'ident':'admin',
+            },
+            (success) => {
+              sData.value.splice(0, sData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                sData.value.push(success.data.data[i])
+              }
+              message.success('添加成功')
+              visibleTwo.value = false;
+            },
+            (error) => {
+
+            }
+        )
       }
       //处理点击导出事件
       const handleExport = () => {
         visibleThree.value = true;
       }
       const exportDate = ref('')
-      const onExportDateChange = (value: Moment[], dateString: string) =>{
+      const onExportDateChange = (value: Moment[], dateString: string) => {
         exportDate.value = dateString
       }
       //处理添加弹出层的确认事件
+      const visibleFour = ref(false)
+      const handleExportLink = ref('')
       const handleExportOk = () => {
         //判断是否为空
-        if (exportDate.value === ''){
+        if (exportDate.value === '') {
           message.error('请选择导出的日期')
           return false
+        } else {
+          let issetDate = false
+          for (let i in sData.value) {
+            if (sData.value[i].date === exportDate.value) {
+              issetDate = true
+            }
+          }
+          if (issetDate) {
+            handleExportLink.value = 'http://119.29.185.52:9001/exportEvenCheck?date=' + exportDate.value
+            visibleFour.value = true
+            visibleThree.value = false;
+          } else {
+            message.error('未找到该日期')
+            return false
+          }
         }
-        // message.success('导出成功')
-        // visibleThree.value = false;
+      }
+      const handleDownLoadOk = () => {
+        visibleFour.value = false
       }
       return {
-        data,
+        sData,
         columns,
         columns2,
         handleSearch,
@@ -744,8 +661,12 @@
         weekly,
         whichToday,
         onExportDateChange,
+        showAllItem,
+        visibleFour,
+        handleDownLoadOk,
+        handleExportLink,
 
-        clazz,
+        room,
         sArriveNumOfPeople,
         numOfPeopleStayOut,
         leave,
@@ -771,7 +692,7 @@
 </script>
 
 <style>
-  .ant-modal-mask {
-    background-color: rgba(0, 0, 0, 0.3);
+  .ant-spin-container .ant-table-fixed-left .ant-table-tbody > tr {
+    height: 107px !important;
   }
 </style>

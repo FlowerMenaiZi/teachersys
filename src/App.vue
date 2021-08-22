@@ -26,22 +26,6 @@
             sessionStorage.setItem("store", JSON.stringify($store.state))
           }
         })
-        if ($store.state.userInfo.role != -1){
-          switch ($store.state.userInfo.role) {
-            case 1:
-              router.push('/teacher');
-              break
-            case 2:
-              router.push('/teacher')
-              break
-            case 3:
-              router.push('/admin')
-              break
-            case 4:
-              router.push('/clazz')
-              break
-          }
-        }
       })
       return {}
     }

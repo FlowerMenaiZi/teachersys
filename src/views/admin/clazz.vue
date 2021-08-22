@@ -378,7 +378,7 @@
 
         proxy.$api.get(
             '/addClazz',
-            {'X-CSRF-TOKEN':proxy.$cookie.getCookie('user')},
+            {},
             {'clazzName':curClazzName.value,'room':curClazzRoomName.value,'departId':curSelValue.value,'power':'班级','password':curClazzPass.value},
             (success)=>{
               if (success.data.error === 0){

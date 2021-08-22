@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination"
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
@@ -28,35 +28,36 @@
       </div>
     </template>
     <template #operation="{ record }">
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleSee(record.id)">查看
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleSee(record.key)">查看
       </a-button>
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleExport(record.id)">导出
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}">
+        <a :href="handleExport(record.key)" target="_blank">导出</a>
       </a-button>
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleConfirmTime(record.id)">确认
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleConfirmTime(record.key)">确认
       </a-button>
       <a-popconfirm
               title="是否要删除？"
               ok-text="是"
               cancel-text="否"
-              @confirm="handleConfirmDel(record.tpcId)"
+              @confirm="handleConfirmDel(record.key)"
       >
         <a-button type="danger">删除</a-button>
       </a-popconfirm>
     </template>
   </a-table>
-  <a-modal v-model:visible="showModify" title="查看授课计划执行情况项" @ok="handleSeeOk()" okText="确认" cancelText="取消"
+  <a-modal v-model:visible="showAllItem" title="查看授课计划执行情况项" @ok="handleSeeOk()" okText="确认" cancelText="取消"
            width="90%">
     <a-table :columns="columns2" :data-source="itemData" :scroll="{ x: 1200, y: 300 }"
-             :pagination="pagination" :rowKey="itemData.key">
+             :pagination="pagination">
       <template #operation="{ record }">
-        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.tpcItemId)">
+        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.key)">
           修改
         </a-button>
         <a-popconfirm
                 title="是否要删除？"
                 ok-text="是"
                 cancel-text="否"
-                @confirm="itemConfirmDel(record.tpcItemId)"
+                @confirm="itemConfirmDel(record.key)"
         >
           <a-button type="danger">删除</a-button>
         </a-popconfirm>
@@ -89,15 +90,19 @@
 </template>
 
 <script lang="ts">
-  import {defineComponent, reactive, ref, Ref} from 'vue';
+  import {defineComponent, reactive, ref, Ref,getCurrentInstance,onMounted,computed} from 'vue';
   import {message} from 'ant-design-vue';
   import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue';
+  import $store from "../../../store/index"
   //设置接收数据的接口
   interface TableDataType {
     key: string;
-    date: string;
+    id: number;
+    created_at: string;
     term: string;
-    examiner: string;
+    term_id: number;
+    teacher_id: number;
+    teacher: string;
   }
   export default defineComponent({
     name: "teachingPlanCheck",
@@ -119,21 +124,34 @@
         pageSize: 5
       };
       /*第一个弹出层*/
-      const data = ref([
-        {
-          key: '1',
-          tpcId:1,
-          date: '2021-7-12',
-          term: '2020-2021学年度 第2学期',
-          examiner: ''
-        }
-      ])
+      const sData: Ref<TableDataType[]> = ref([]);
+
+      const {proxy}:any = getCurrentInstance()
+      onMounted(()=>{
+        proxy.$api.get(
+            '/teachingPlanItem',
+            {},
+            {'id':$store.state.userInfo.id},
+            (success)=>{
+              sData.value.splice(0, sData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                sData.value.push(success.data.data[i])
+              }
+            },
+            (error)=>{
+
+            }
+        )
+      })
       const columns = [
         {
           title: '日期',
-          dataIndex: 'date',
+          dataIndex: 'created_at',
           defaultSortOrder: 'false',
-          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.date) - Date.parse(b.date),
+          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.created_at) - Date.parse(b.created_at),
         },
         {
           title: '学期',
@@ -155,14 +173,14 @@
         },
         {
           title: '检查人',
-          dataIndex: 'examiner',
+          dataIndex: 'teacher',
           slots: {
             filterDropdown: 'filterDropdown',
             filterIcon: 'filterIcon',
             customRender: 'customRender',
           },
           onFilter: (value: string, record: TableDataType) =>
-              record.examiner.toString().toLowerCase().includes(value.toLowerCase()),
+              record.teacher.toString().toLowerCase().includes(value.toLowerCase()),
           onFilterDropdownVisibleChange: (visible: any) => {
             if (visible) {
               setTimeout(() => {
@@ -177,28 +195,16 @@
           slots: {customRender: 'operation'},
         },
       ];
-      //弹出按钮
-      const handleExport = (id:number) =>{
-
-      }
-      //确认按钮
-      const handleConfirmTime = (id:number) =>{
-
-      }
-      //删除按钮
-      const handleConfirmDel = (id:number) => {
-
-      }
 
       /*第二个弹出层*/
       const columns2 = [
-        {title: '教师姓名', width: 100, dataIndex: 'teacherName', key: 'teacherName', fixed: 'left', align: 'center'},
-        {title: '课程', dataIndex: 'courseName', key: 'courseName', width: 100, fixed: 'left',align: 'center'},
-        {title: '班级', dataIndex: 'clazz', key: 'clazz', width: 200, fixed: 'left', align: 'center'},
-        {title: '计划进度', dataIndex: 'schedule', key: 'schedule', width: 180, align: 'center'},
-        {title: '实际进度', dataIndex: 'actualProgress', key: 'actualProgress', width: 180, align: 'center'},
-        {title: '比较情况', dataIndex: 'comparison', key: 'comparison', width: 180, align: 'center'},
-        {title: '原因分析', dataIndex: 'causeAnalysis', key: 'causeAnalysis', width: 180, align: 'center'},
+        {title: '教师姓名', width: 100, dataIndex: 'teacher', key: 'teacher', fixed: 'left', align: 'center'},
+        {title: '课程', dataIndex: 'course', key: 'course', width: 130, fixed: 'left', align: 'center'},
+        {title: '班级', dataIndex: 'clazz', key: 'clazz', width: 125, fixed: 'left', align: 'center'},
+        {title: '计划进度', dataIndex: 'plan_progress', key: 'plan_progress', width: 180, align: 'center'},
+        {title: '实际进度', dataIndex: 'actual_progress', key: 'actual_progress', width: 180, align: 'center'},
+        {title: '比较情况', dataIndex: 'compare', key: 'compare', width: 180, align: 'center'},
+        {title: '原因分析', dataIndex: 'reason', key: 'reason', width: 180, align: 'center'},
         {
           title: '操作',
           dataIndex: 'operation',
@@ -208,30 +214,73 @@
           slots: {customRender: 'operation'},
         },
       ]
-      const itemData = ref([
-        {
-          key: '1',
-          tpcItemId:1,
-          teacherName: '郑镇耿',
-          courseName: 'LINUX服务器管理(下)',
-          clazz: '193计网502',
-          schedule: '',
-          actualProgress: '',
-          comparison: '',
-          causeAnalysis: '',
-        },
-      ])
-      const showModify = ref(false)
-      const handleSee = (id:number) =>{
-        showModify.value = true
+      const itemData:any = ref([])
+      const showAllItem = ref(false)
+      const handleSee = (key:string) =>{
+        proxy.$api.get(
+            '/getPCheckItem',
+            {},
+            {'id':parseInt(key)},
+            (success)=>{
+              if (success.data.error === 0) {
+                showAllItem.value = true
+                itemData.value.splice(0, itemData.value.length)
+                for (let i in success.data.data) {
+                  let id = success.data.data[i].id
+                  success.data.data[i].key = id.toString()
+                  itemData.value.push(success.data.data[i])
+                }
+              }
+            },
+            (error)=>{}
+        )
       }
       const handleSeeOk = () =>{
-        showModify.value = false
+        showAllItem.value = false
       }
-      const _id = ref()
+      const _key = ref()
+      //弹出按钮
+      const handleExport = computed(() => (id) => {
+        return 'http://119.29.185.52:9001/exportPlanCheck?id=' + parseInt(id);
+      })
+      //确认按钮
+      const handleConfirmTime = (key:string) =>{
+        proxy.$api.get(
+            '/checkPlanCheck',
+            {},
+            {'id':parseInt(key),'teacher_id':$store.state.userInfo.id},
+            (success)=>{
+              if (success.data.error === 0) {
+                for (let i in sData.value) {
+                  if (sData.value[i].key === key) {
+                    sData.value[i].teacher = $store.state.userInfo.user
+                  }
+                }
+              }
+            },
+            (error)=>{
 
-      const itemConfirmDel = (id:number) =>{
+            }
+        )
+      }
+      //删除按钮
+      const handleConfirmDel = (key:string) => {
+        proxy.$api.get(
+            '/delTeachingPlan',
+            {},
+            {'id':parseInt(key)},
+            (success)=>{
+              if (success.data.error === 0) {
+                sData.value = sData.value.filter(item => item.key != key)
+                message.success('删除成功')
+              } else {
+                message.success('删除失败')
+              }
+            },
+            (error)=>{
 
+            }
+        )
       }
 
       /*第三个弹出层*/
@@ -240,37 +289,84 @@
       const actualProgress = ref('')
       const comparison = ref('')
       const causeAnalysis = ref('')
-      const handleModify = (id:number) =>{
-        _id.value = id
+      const handleModify = (key:string) =>{
+        _key.value = key
+        showModifyItem.value = true
         for (let i = 0; i < itemData.value.length; i++) {
-          if (itemData.value[i].tpcItemId === _id.value) {
-            schedule.value = itemData.value[i].schedule
-            actualProgress.value = itemData.value[i].actualProgress
-            comparison.value = itemData.value[i].comparison
-            causeAnalysis.value = itemData.value[i].causeAnalysis
+          if (itemData.value[i].key === _key.value) {
+            schedule.value = itemData.value[i].plan_progress
+            actualProgress.value = itemData.value[i].actual_progress
+            comparison.value = itemData.value[i].compare
+            causeAnalysis.value = itemData.value[i].reason
           }
         }
-        showModifyItem.value = true
       }
       const handleModifyOk = () =>{
-        for (let i = 0; i < itemData.value.length; i++) {
-          if (itemData.value[i].tpcItemId === _id.value) {
-            itemData.value[i].schedule = schedule.value
-            itemData.value[i].actualProgress = actualProgress.value
-            itemData.value[i].comparison = comparison.value
-            itemData.value[i].causeAnalysis = causeAnalysis.value
-          }
-        }
-        showModifyItem.value = false
+        proxy.$api.get(
+            '/updTPlanCheckItem',
+            {},
+            {'id':parseInt(_key.value),'plan_progress':schedule.value,'actual_progress':actualProgress.value,'compare':comparison.value,'reason':causeAnalysis.value},
+            (success)=>{
+              if (success.data.error===0){
+                for (let i = 0; i < itemData.value.length; i++) {
+                  if (itemData.value[i].key === _key.value) {
+                    itemData.value[i].plan_progress = schedule.value
+                    itemData.value[i].actual_progress = actualProgress.value
+                    itemData.value[i].compare = comparison.value
+                    itemData.value[i].reason = causeAnalysis.value
+                  }
+                }
+                showModifyItem.value = false
+                message.success('修改成功')
+              }
+            },
+            (error)=>{
+
+            }
+        )
+      }
+
+      const itemConfirmDel = (key:string) =>{
+        proxy.$api.get(
+            '/delPlanCheckItem',
+            {},
+            {'id':parseInt(key)},
+            (success)=>{
+              if (success.data.error === 0){
+                itemData.value = itemData.value.filter(item => item.key != key)
+                message.success('删除成功')
+              }
+            },
+            (error)=>{
+
+            }
+        )
       }
 
       /*新增*/
       const handleConfirmInsert = () =>{
         //  进行新增操作
+        proxy.$api.get(
+            '/tSAddPlanCheck',
+            {},
+            {'id': $store.state.userInfo.id},
+            (success) => {
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0, 10)
+                sData.value.push(success.data.data[i])
+              }
+              message.success('新增成功')
+            },
+            (error) => {
+
+            }
+        )
       }
 
       return {
-        data,
+        sData,
         columns,
         pagination,
         searchInput,
@@ -279,7 +375,7 @@
         handleConfirmDel,
 
         columns2,
-        showModify,
+        showAllItem,
         itemData,
         handleSee,
         handleSeeOk,

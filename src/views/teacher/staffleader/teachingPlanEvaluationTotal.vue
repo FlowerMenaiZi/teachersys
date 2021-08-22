@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination"
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
@@ -28,17 +28,18 @@
       </div>
     </template>
     <template #operation="{ record }">
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleSee(record.id)">查看
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleSee(record.key)">查看
       </a-button>
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleExport(record.id)">导出
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}">
+        <a :href="handleExport(record.key)" target="_blank">导出</a>
       </a-button>
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleConfirmTime(record.id)">确认
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleConfirmTime(record.key)">确认
       </a-button>
       <a-popconfirm
           title="是否要删除？"
           ok-text="是"
           cancel-text="否"
-          @confirm="handleConfirmDel(record.tpcId)"
+          @confirm="handleConfirmDel(record.key)"
       >
         <a-button type="danger">删除</a-button>
       </a-popconfirm>
@@ -50,14 +51,14 @@
     <a-table :columns="columns2" :data-source="itemData"
              :pagination="pagination" :rowKey="itemData.key">
       <template #operation="{ record }">
-        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.tpcItemId)">
+        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.key)">
           修改
         </a-button>
         <a-popconfirm
             title="是否要删除？"
             ok-text="是"
             cancel-text="否"
-            @confirm="itemConfirmDel(record.tpcItemId)"
+            @confirm="itemConfirmDel(record.key)"
         >
           <a-button type="danger">删除</a-button>
         </a-popconfirm>
@@ -98,16 +99,20 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, reactive, ref, Ref} from 'vue';
+import {defineComponent, reactive, ref, Ref,getCurrentInstance,onMounted,computed} from 'vue';
 import {message} from 'ant-design-vue';
 import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue';
+import $store from "../../../store/index"
 
 //设置接收数据的接口
 interface TableDataType {
   key: string;
-  date: string;
+  created_at: string;
   term: string;
-  examiner: string;
+  staff: string;
+  staff_id: number;
+  teacher: string;
+  teacher_id: number;
 }
 
 export default defineComponent({
@@ -131,21 +136,13 @@ export default defineComponent({
       pageSize: 5
     };
     /*第一个弹出层*/
-    const data = ref([
-      {
-        key: '1',
-        tpcId: 1,
-        date: '2021-7-12',
-        term: '2020-2021学年度 第2学期',
-        examiner: ''
-      }
-    ])
+    const sData: Ref<TableDataType[]> = ref([])
     const columns = [
       {
         title: '日期',
-        dataIndex: 'date',
+        dataIndex: 'created_at',
         defaultSortOrder: 'false',
-        sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.date) - Date.parse(b.date),
+        sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.created_at) - Date.parse(b.created_at),
       },
       {
         title: '学期',
@@ -167,14 +164,14 @@ export default defineComponent({
       },
       {
         title: '检查人',
-        dataIndex: 'examiner',
+        dataIndex: 'teacher',
         slots: {
           filterDropdown: 'filterDropdown',
           filterIcon: 'filterIcon',
           customRender: 'customRender',
         },
         onFilter: (value: string, record: TableDataType) =>
-            record.examiner.toString().toLowerCase().includes(value.toLowerCase()),
+            record.teacher.toString().toLowerCase().includes(value.toLowerCase()),
         onFilterDropdownVisibleChange: (visible: any) => {
           if (visible) {
             setTimeout(() => {
@@ -189,24 +186,32 @@ export default defineComponent({
         slots: {customRender: 'operation'},
       },
     ];
-    //弹出按钮
-    const handleExport = (id: number) => {
-
-    }
-    //确认按钮
-    const handleConfirmTime = (id: number) => {
-
-    }
-    //删除按钮
-    const handleConfirmDel = (id: number) => {
-
-    }
+    const {proxy}:any = getCurrentInstance()
+    onMounted(()=>{
+      proxy.$api.get(
+          '/getTSEvaluation',
+          {},
+          {'id':$store.state.userInfo.id},
+          (success) => {
+            sData.value.splice(0, sData.value.length)
+            for (let i in success.data.data) {
+              let id = success.data.data[i].id
+              success.data.data[i].key = id.toString()
+              success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+              sData.value.push(success.data.data[i])
+            }
+          },
+          (error) => {
+            console.log(error);
+          }
+      )
+    })
 
     /*第二个弹出层*/
     const columns2 = [
-      {title: '教师姓名', dataIndex: 'teacherName', key: 'teacherName', width: 80,align: 'center'},
-      {title: '课程', dataIndex: 'courseName', key: 'courseName', width: 100, align: 'center'},
-      {title: '合计', dataIndex: 'totalScore', key: 'totalScore', width: 120, align: 'center'},
+      {title: '教师姓名', dataIndex: 'teacher', key: 'teacher', width: 80,align: 'center'},
+      {title: '课程', dataIndex: 'course', key: 'course', width: 100, align: 'center'},
+      {title: '合计', dataIndex: 'total_score', key: 'total_score', width: 120, align: 'center'},
       {
         title: '操作',
         dataIndex: 'operation',
@@ -215,31 +220,94 @@ export default defineComponent({
         slots: {customRender: 'operation'},
       },
     ]
-    const itemData = ref([
-      {
-        key: '1',
-        tpcItemId: 1,
-        teacherName: '郑镇耿',
-        courseName: 'LINUX服务器管理(下)',
-        clazz: '193计网502',
-        uploadScore: '',
-        formatScore: '',
-        completeScore: '',
-        designScore: '',
-        totalScore: '',
-      },
-    ])
+    const itemData:any = ref([])
     const showSee = ref(false)
-    const handleSee = (id: number) => {
-      showSee.value = true
+    const _key = ref()
+    const handleSee = (key: string) => {
+      proxy.$api.get(
+          '/getTEvaluationItem',
+          {},
+          {'id':parseInt(key)},
+          (success)=>{
+            showSee.value = true
+            itemData.value.splice(0, itemData.value.length)
+            for (let i in success.data.data) {
+              let id = success.data.data[i].id
+              success.data.data[i].key = id.toString()
+              itemData.value.push(success.data.data[i])
+            }
+          },
+          (error)=>{
+
+          }
+      )
     }
     const handleSeeOk = () => {
       showSee.value = false
     }
-    const _id = ref()
+    //弹出按钮
+    const handleExport = computed(()=>(id)=>{
+      return 'http://119.29.185.52:9001/exportTEvaluation?id='+parseInt(id);
+    })
+    //确认按钮
+    const handleConfirmTime = (key: string) => {
+      proxy.$api.get(
+          '/checkTeachingEval',
+          {},
+          {'id':parseInt(key),'teacher_id':$store.state.userInfo.id},
+          (success)=>{
+            if (success.data.error === 0){
+              sData.value.splice(0, sData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                sData.value.push(success.data.data[i])
+              }
+            }
+          },
+          (error)=>{
 
-    const itemConfirmDel = (id: number) => {
+          }
+      )
+    }
+    //删除按钮
+    const handleConfirmDel = (key: string) => {
+      proxy.$api.get(
+          '/delTEvaluation',
+          {},
+          {'id':parseInt(key)},
+          (success)=>{
+            if (success.data.error === 0) {
+              sData.value = sData.value.filter(item => item.key != key)
+              message.success('删除成功')
+            } else {
+              message.success('删除失败')
+            }
+          },
+          (error)=>{
 
+          }
+      )
+    }
+
+
+
+    const itemConfirmDel = (key: string) => {
+      proxy.$api.get(
+          '/delTEvaluationItem',
+          {},
+          {'id':parseInt(key)},
+          (success)=>{
+            if (success.data.error === 0){
+              itemData.value = itemData.value.filter(item => item.key != key)
+              message.success('删除成功')
+            }
+          },
+          (error)=>{
+
+          }
+      )
     }
 
     /*第三个弹出层*/
@@ -250,16 +318,16 @@ export default defineComponent({
     const designScore = ref('')
     const totalScore = ref('')
     const showModify = ref(false)
-    const handleModify = (id: number) => {
-      _id.value = id
+    const handleModify = (key: string) => {
+      _key.value = key
       //显示弹出层
       for (let i = 0; i < itemData.value.length; i++) {
-        if (itemData.value[i].tpcItemId === _id.value) {
-          uploadScore.value = itemData.value[i].uploadScore
-          formatScore.value = itemData.value[i].formatScore
-          completeScore.value = itemData.value[i].completeScore
-          designScore.value = itemData.value[i].designScore
-          totalScore.value = itemData.value[i].totalScore
+        if (itemData.value[i].key === _key.value) {
+          uploadScore.value = itemData.value[i].upload_score
+          formatScore.value = itemData.value[i].format_score
+          completeScore.value = itemData.value[i].complete_score
+          designScore.value = itemData.value[i].design_score
+          totalScore.value = itemData.value[i].total_score
         }
       }
       showModify.value = true
@@ -268,30 +336,60 @@ export default defineComponent({
       totalScore.value = uploadScore.value + formatScore.value + completeScore.value + designScore.value
     }
     const handleModifyOk = () => {
-      //在这进行数据修改上传数据库//////////////////////////////////////////////
-      for (let i = 0; i < itemData.value.length; i++) {
-        if (itemData.value[i].tpcItemId === _id.value) {
-          itemData.value[i].uploadScore = uploadScore.value
-          itemData.value[i].formatScore = formatScore.value
-          itemData.value[i].completeScore = completeScore.value
-          itemData.value[i].designScore = designScore.value
-          itemData.value[i].totalScore = totalScore.value
-        }
-      }
-      showModify.value = false
-      message.success('修改成功')
+      proxy.$api.get(
+          '/updTEvaluationItem',
+          {},
+          {'id':parseInt(_key.value),'upload_score':uploadScore.value,'format_score':formatScore.value,'complete_score':completeScore.value,'design_score':designScore.value,'total_score':totalScore.value},
+          (success)=>{
+            if (success.data.error === 0){
+              for (let i = 0; i < itemData.value.length; i++) {
+                if (itemData.value[i].key === _key.value) {
+                  itemData.value[i].upload_score = uploadScore.value
+                  itemData.value[i].format_score = formatScore.value
+                  itemData.value[i].complete_score = completeScore.value
+                  itemData.value[i].design_score = designScore.value
+                  itemData.value[i].total_score = totalScore.value
+                }
+              }
+              showModify.value = false
+              message.success('修改成功')
+            }else{
+              message.error('修改失败')
+            }
+          },
+          (error)=>{
+
+          }
+      )
     }
 
     /*新增*/
     const handleConfirmInsert = () =>{
       //  进行新增操作
+      proxy.$api.get(
+          '/tAddTEvaluation',
+          {},
+          {'id':$store.state.userInfo.id},
+          (success)=>{
+            for (let i in success.data.data) {
+              let id = success.data.data[i].id
+              success.data.data[i].key = id.toString()
+              success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+              sData.value.push(success.data.data[i])
+            }
+            message.success('新增成功')
+          },
+          (error)=>{
+
+          }
+      )
     }
     return {
       searchInput,
       state,
       pagination,
       columns,
-      data,
+      sData,
       handleExport,
       handleConfirmTime,
       handleConfirmDel,

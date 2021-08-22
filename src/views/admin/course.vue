@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination">
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
         <a-input
@@ -27,23 +27,7 @@
       </div>
     </template>
     <template #operation="{ record }">
-      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleModify(record.key)">修改
-        <a-modal v-model:visible="record.isShow" title="修改" @ok="handleOk()" okText="确认" cancelText="取消">
-          <label>课程名</label>
-          <a-input placeholder="请输入课程名称" v-model:value="curCourseValue" style="margin-bottom: 10px"></a-input>
-          <label>老师</label><br/>
-          <a-select
-              show-search
-              style="width: 100%"
-              @change="handleTeacherChange"
-              v-model:value="curTeacherName"
-          >
-            <a-select-option v-for="(item,index) in teachers" :value="item.name" :key="item.key">
-              {{ item.name }}
-            </a-select-option>
-          </a-select>
-        </a-modal>
-      </a-button>
+      <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleModify(record.key)">修改</a-button>
       <a-popconfirm
           title="是否要删除？"
           ok-text="是"
@@ -54,6 +38,21 @@
       </a-popconfirm>
     </template>
   </a-table>
+  <a-modal v-model:visible="showModify" title="修改" @ok="handleOk()" okText="确认" cancelText="取消">
+    <label>课程名</label>
+    <a-input placeholder="请输入课程名称" v-model:value="curCourseValue" style="margin-bottom: 10px"></a-input>
+    <label>老师</label><br/>
+    <a-select
+            show-search
+            style="width: 100%"
+            @change="handleTeacherChange"
+            v-model:value="curTeacherName"
+    >
+      <a-select-option v-for="(item,index) in teachers" :value="item.id" :key="item.key">
+        {{ item.name }}
+      </a-select-option>
+    </a-select>
+  </a-modal>
   <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleAdd">添加
     <a-modal v-model:visible="visibleTwo" title="添加" @ok="handleAddOk" okText="确认" cancelText="取消">
       <label>课程名</label>
@@ -65,7 +64,7 @@
           @change="handleTeacherChange"
           v-model:value="curTeacherName"
       >
-        <a-select-option v-for="(item,index) in teachers" :value="item.name" :key="item.key">
+        <a-select-option v-for="(item,index) in teachers" :value="item.id" :key="item.key">
           {{ item.name }}
         </a-select-option>
       </a-select>
@@ -74,7 +73,7 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, ref, reactive, UnwrapRef, Ref} from 'vue';
+import {defineComponent, ref, reactive, UnwrapRef, Ref,onMounted,getCurrentInstance} from 'vue';
 import {message} from 'ant-design-vue';
 import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue';
 
@@ -82,9 +81,9 @@ import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue
 interface TableDataType {
   key: string;
   id: number;
-  courseName: string;
-  teachersName: string;
-  isShow?:boolean;
+  name: string;
+  teacher_name: string;
+  teacher_id:number;
 }
 
 
@@ -103,39 +102,41 @@ export default defineComponent({
       pageSize: 5
     };
     //模拟数据，使用TableDataType接口验证数据
-    const data: Ref<TableDataType[]> = ref([
-      {
-        key: '1',
-        id: 1,
-        courseName: '海报型录设计',
-        teachersName: '邱垂章',
-        isShow:false
-      },
-      {
-        key: '2',
-        id: 2,
-        courseName: '税收筹划',
-        teachersName: '刘献红'
-      },
-      {
-        key: '3',
-        id: 3,
-        courseName: '学习高技能人才楷模专题教育',
-        teachersName: '郝佩玉'
-      },
-      {
-        key: '4',
-        id: 4,
-        courseName: 'JAVA网站编程',
-        teachersName: '付天义'
-      },
-      {
-        key: '5',
-        id: 5,
-        courseName: '就业指导',
-        teachersName: '王景奇'
-      }
-    ]);
+    const sData: Ref<TableDataType[]> = ref([]);
+    const teachers:any = ref([])
+    const {proxy}:any = getCurrentInstance()
+    onMounted(()=>{
+      proxy.$api.get(
+          '/getTeacher',
+          {},
+          {},
+          (success)=>{
+            for (let i in success.data.data){
+              let id = success.data.data[i].id
+              success.data.data[i].key = id.toString()
+              teachers.value.push(success.data.data[i])
+            }
+          },
+          (error)=>{
+
+          }
+      )
+      proxy.$api.get(
+          '/getCourse',
+          {},
+          {},
+          (success)=>{
+            for (let i in success.data.data){
+              let id = success.data.data[i].id
+              success.data.data[i].key = id.toString()
+              sData.value.push(success.data.data[i])
+            }
+          },
+          (error)=>{
+            
+          }
+      )
+    })
     //搜索框状态
     const state = reactive({
       searchText: '',
@@ -151,14 +152,14 @@ export default defineComponent({
       },
       {
         title: '课程名',
-        dataIndex: 'courseName',
+        dataIndex: 'name',
         slots: {
           filterDropdown: 'filterDropdown',
           filterIcon: 'filterIcon',
           customRender: 'customRender',
         },
         onFilter: (value: string, record: TableDataType) =>
-            record.courseName.toString().toLowerCase().includes(value.toLowerCase()),
+            record.name.toString().toLowerCase().includes(value.toLowerCase()),
         onFilterDropdownVisibleChange: (visible: any) => {
           if (visible) {
             setTimeout(() => {
@@ -169,14 +170,14 @@ export default defineComponent({
       },
       {
         title: '老师名',
-        dataIndex: 'teachersName',
+        dataIndex: 'teacher_name',
         slots: {
           filterDropdown: 'filterDropdown',
           filterIcon: 'filterIcon',
           customRender: 'customRender',
         },
         onFilter: (value: string, record: TableDataType) =>
-            record.teachersName.toString().toLowerCase().includes(value.toLowerCase()),
+            record.teacher_name.toString().toLowerCase().includes(value.toLowerCase()),
         onFilterDropdownVisibleChange: (visible: any) => {
           if (visible) {
             setTimeout(() => {
@@ -191,48 +192,7 @@ export default defineComponent({
         slots: {customRender: 'operation'},
       },
     ];
-    const teachers = ref([
-      {
-        key: '1',
-        id: 1,
-        name: '王景奇'
-      },
-      {
-        key: '2',
-        id: 2,
-        name: '钟春琛'
-      },
-      {
-        key: '3',
-        id: 3,
-        name: '邱垂章'
-      },
-      {
-        key: '4',
-        id: 4,
-        name: '刘献红'
-      },
-      {
-        key: '5',
-        id: 5,
-        name: '林德南'
-      },
-      {
-        key: '6',
-        id: 6,
-        name: '郝佩玉'
-      },
-      {
-        key: '7',
-        id: 7,
-        name: '付天义'
-      },
-      {
-        key: '8',
-        id: 8,
-        name: '刘杨'
-      },
-    ])
+
     //处理搜索结果
     const handleSearch = (selectedKeys: any, confirm: any, dataIndex: any) => {
       confirm();
@@ -248,42 +208,73 @@ export default defineComponent({
     const curCourseValue = ref('')
     //设置当前点击的key值为空
     const _key = ref()
-    const curTeacherName = ref('')
+    const curTeacherName = ref()
+    const showModify = ref(false)
     //处理修改函数，传入key值
     const handleModify = (key: string) => {
       _key.value = key
       //显示弹出层
-      for (let i of data.value) {
+      for (let i of sData.value) {
         if (i.key === _key.value) {
           //设置弹出层input显示的值
-          curCourseValue.value = i.courseName
-          curTeacherName.value = i.teachersName
+          curCourseValue.value = i.name
+          curTeacherName.value = i.teacher_id
         }
-        if (i.key === data.value[0].key) i.isShow = true
+        showModify.value = true
       }
     }
-    const selTeacherChange = ref('')
-    const handleTeacherChange = (value: string) => {
-      selTeacherChange.value = value
-    };
     //处理弹出层点击ok
     const handleOk = () => {
-      for (let i in data.value) {
-        if (data.value[i].key === _key.value) {
-          //修改源数据对应的值
-          data.value[i].courseName = curCourseValue.value
-          if (selTeacherChange.value !== ''){
-            data.value[i].teachersName = selTeacherChange.value
+      proxy.$api.get(
+          '/updCourse',
+          {},
+          {'id':parseInt(_key.value),'courseName':curCourseValue.value,'teacher_id':curTeacherName.value},
+          (success)=>{
+            if (success.data.error === 0){
+              sData.value.splice(0,sData.value.length)
+              for (let i in success.data.data){
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                sData.value.push(success.data.data[i])
+              }
+              message.success('修改成功');
+              showModify.value = false
+            } else{
+              message.error('修改失败')
+              showModify.value = true
+            }
+          },
+          (error)=>{
+
           }
-          message.success('修改成功')
-        }
-        data.value[0].isShow = false
-      }
+      )
+
+
+
     };
     //确认删除
     const confirm = (key: string) => {
-      data.value = data.value.filter(item => item.key !== key)
-      message.success('删除成功');
+      proxy.$api.get(
+          '/delCourse',
+          {},
+          {'id':parseInt(key)},
+          (success)=>{
+            if (success.data.error === 0){
+              sData.value.splice(0,sData.value.length)
+              for (let i in success.data.data){
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                sData.value.push(success.data.data[i])
+              }
+              message.success('删除成功');
+            } else{
+              message.error('删除失败')
+            }
+          },
+          (error)=>{
+
+          }
+      )
     };
 
     //第二个弹出层默认为否
@@ -294,7 +285,10 @@ export default defineComponent({
       curCourseValue.value = ''
       curTeacherName.value = ''
     }
-
+    const selTeacherChange = ref('')
+    const handleTeacherChange = (value: string) => {
+      selTeacherChange.value = value
+    };
     //处理添加弹出层的确认事件
     const handleAddOk = () => {
       //判断是否为空
@@ -306,28 +300,41 @@ export default defineComponent({
         return false
       } else {
         //判断是否已经存在该课程
-        for (let i in data.value) {
-          if (data.value[i].courseName === curCourseValue.value.trim()) {
+        for (let i in sData.value) {
+          if (sData.value[i].name === curCourseValue.value.trim()) {
             message.error('该课程已存在')
             return false
           }
         }
-        //模拟添加
-        const newCourse = {
-          key: Date.now().toString(),
-          id: Date.now(),
-          courseName: curCourseValue.value,
-          teachersName: selTeacherChange.value,
-        }
-        // //向源数据追加
-        data.value.push(newCourse)
-        message.success('添加成功')
-        visibleTwo.value = false;
+        proxy.$api.get(
+            '/addCourse',
+            {},
+            {'courseName':curCourseValue.value.trim(),'teacher_id':parseInt(selTeacherChange.value)},
+            (success)=>{
+              if (success.data.error === 0){
+                sData.value.splice(0,sData.value.length)
+                for (let i in success.data.data){
+                  let id = success.data.data[i].id
+                  success.data.data[i].key = id.toString()
+                  sData.value.push(success.data.data[i])
+                }
+                message.success('添加成功')
+                visibleTwo.value = false;
+              } else{
+                message.error('添加失败')
+                visibleTwo.value = true;
+              }
+
+            },
+            (error)=>{
+
+            }
+        )
       }
 
     }
     return {
-      data,
+      sData,
       columns,
       handleSearch,
       handleReset,
@@ -342,7 +349,8 @@ export default defineComponent({
       visibleTwo,
       handleTeacherChange,
       curTeacherName,
-      teachers
+      teachers,
+      showModify
     };
   },
 });

@@ -8,7 +8,6 @@
         breakpoint="lg"
         collapsed-width="0"
         @breakpoint="breakPoint"
-        :style="{ height: '90vh'}"
         :class="isShowScroll?'showScroll':''"
         :defaultCollapsed="true"
     >
@@ -56,7 +55,7 @@ export default defineComponent({
     const router = useRouter()
     const {proxy}:any = getCurrentInstance()
     const logout = () =>{
-      localStorage.removeItem('store');
+      sessionStorage.removeItem('store');
       proxy.$cookie.clearCookie('user');
       $store.replaceState(Object.assign({}, $store.state, null))
       router.push('/login');

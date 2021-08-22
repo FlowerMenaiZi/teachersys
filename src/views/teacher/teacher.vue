@@ -8,7 +8,6 @@
             breakpoint="lg"
             collapsed-width="0"
             @breakpoint="breakPoint"
-            :style="{ height: '90vh'}"
             :class="isShowScroll?'showScroll':''"
             :defaultCollapsed="true"
     >
@@ -124,7 +123,7 @@
       const router = useRouter()
       const {proxy}:any = getCurrentInstance()
       const logout = () =>{
-        localStorage.removeItem('store');
+        sessionStorage.removeItem('store');
         proxy.$cookie.clearCookie('user');
         $store.replaceState(Object.assign({}, $store.state, null))
         router.push('/login');
@@ -153,6 +152,7 @@
 
   .showScroll {
     overflow: auto;
+    z-index: 2 !important;
   }
 
   .site-layout-sub-header-background {

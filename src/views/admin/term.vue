@@ -1,5 +1,5 @@
 <template>
-  <a-table :columns="columns" :data-source="data" :pagination="pagination">
+  <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
         <a-input
@@ -49,17 +49,17 @@
   <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleAdd">添加
     <a-modal v-model:visible="visibleTwo" title="添加" @ok="handleAddOk" okText="确认" cancelText="取消">
       <label>开始学年:</label>
-      <a-input placeholder="请输入开始学年" style="margin-bottom: 10px" v-model:value="start"></a-input>
+      <a-input-number placeholder="请输入开始学年" style="margin-bottom: 10px;width: 100%;" v-model:value="start"></a-input-number>
       <label>结束学年:</label>
-      <a-input placeholder="请输入结束学年" style="margin-bottom: 10px" v-model:value="end"></a-input>
+      <a-input-number placeholder="请输入结束学年" style="margin-bottom: 10px;width: 100%;" v-model:value="end"></a-input-number>
       <label>第几学期:</label>
-      <a-input placeholder="请输入第几学期" style="margin-bottom: 10px" v-model:value="whichTerm"></a-input>
+      <a-input-number placeholder="请输入第几学期" style="margin-bottom: 10px;width: 100%;" v-model:value="whichTerm" :min="0" :max="2"></a-input-number>
     </a-modal>
   </a-button>
 </template>
 
 <script lang="ts">
-  import {defineComponent, ref, reactive, UnwrapRef, Ref} from 'vue';
+  import {defineComponent, ref, reactive, UnwrapRef, Ref,onMounted,getCurrentInstance} from 'vue';
   import {message} from 'ant-design-vue';
   import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue';
 
@@ -67,8 +67,8 @@
   interface TableDataType {
     key: string;
     id: number;
-    startTerm: string;
-    endTerm: string;
+    start: string;
+    end: string;
     which: string;
   }
 
@@ -87,15 +87,25 @@
         pageSize: 5
       };
       //模拟数据，使用TableDataType接口验证数据
-      const data: Ref<TableDataType[]> = ref([
-        {
-          key: '1',
-          id: 1,
-          startTerm: '2021',
-          endTerm: '2022',
-          which: '2',
-        },
-      ]);
+      const sData: Ref<TableDataType[]> = ref([]);
+      const {proxy}:any = getCurrentInstance()
+      onMounted(()=>{
+        proxy.$api.get(
+            '/getTerm',
+            {},
+            {},
+            (success)=>{
+              for (let i in success.data.data){
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                sData.value.push(success.data.data[i])
+              }
+            },
+            (error)=>{
+
+            }
+        )
+      })
       //搜索框状态
       const state = reactive({
         searchText: '',
@@ -105,14 +115,14 @@
       const columns = [
         {
           title: '开始学年',
-          dataIndex: 'startTerm',
+          dataIndex: 'start',
           slots: {
             filterDropdown: 'filterDropdown',
             filterIcon: 'filterIcon',
             customRender: 'customRender',
           },
           onFilter: (value: string, record: TableDataType) =>
-              record.startTerm.toString().toLowerCase().includes(value.toLowerCase()),
+              record.start.toString().toLowerCase().includes(value.toLowerCase()),
           onFilterDropdownVisibleChange: (visible: any) => {
             if (visible) {
               setTimeout(() => {
@@ -123,14 +133,14 @@
         },
         {
           title: '结束学年',
-          dataIndex: 'endTerm',
+          dataIndex: 'end',
           slots: {
             filterDropdown: 'filterDropdown',
             filterIcon: 'filterIcon',
             customRender: 'customRender',
           },
           onFilter: (value: string, record: TableDataType) =>
-              record.endTerm.toString().toLowerCase().includes(value.toLowerCase()),
+              record.end.toString().toLowerCase().includes(value.toLowerCase()),
           onFilterDropdownVisibleChange: (visible: any) => {
             if (visible) {
               setTimeout(() => {
@@ -184,30 +194,77 @@
       const handleModify = (key: string) => {
         showModify.value = true
         _key.value = key
-        for (let i of data.value) {
+        for (let i of sData.value) {
           if (i.key === _key.value) {
-            start.value = i.startTerm
-            end.value = i.endTerm
+            start.value = i.start
+            end.value = i.end
             whichTerm.value = i.which
           }
         }
       }
       //处理弹出层点击ok
       const handleOk = () => {
-        for (let i of data.value) {
-          if (i.key === _key.value) {
-            i.startTerm = start.value
-            i.endTerm = end.value
-            i.which = whichTerm.value
+        const isUpdTerm = ref(false)
+        for (let i = 0;i<sData.value.length;i++){
+          if (start.value == sData.value[i].start){
+            if (end.value == sData.value[i].end){
+              if (whichTerm.value == sData.value[i].which){
+                isUpdTerm.value = true
+              }
+            }
           }
         }
-        message.success('修改成功')
-        showModify.value = false
+        if (isUpdTerm.value){
+          message.error('该学期已存在')
+          return false
+        }else{
+          proxy.$api.get(
+              '/updTerm',
+              {},
+              {'id':parseInt(_key.value),'start':start.value,'end':end.value,'which':whichTerm.value},
+              (success)=>{
+                if (success.data.error === 0){
+                  sData.value.splice(0,sData.value.length)
+                  for (let i in success.data.data){
+                    let id = success.data.data[i].id
+                    success.data.data[i].key = id.toString()
+                    sData.value.push(success.data.data[i])
+                  }
+                  message.success('修改成功')
+                  showModify.value = false
+                }else{
+                  message.error('修改失败')
+                }
+              },
+              (error)=>{
+
+              }
+          )
+        }
+
       };
       //确认删除
       const confirm = (key: string) => {
-        data.value = data.value.filter(item => item.key !== key)
-        message.success('删除成功');
+        proxy.$api.get(
+            '/delTerm',
+            {},
+            {'id':parseInt(key)},
+            (success)=>{
+              if (success.data.error === 0){
+                sData.value.splice(0,sData.value.length)
+                for (let i in success.data.data){
+                  let id = success.data.data[i].id
+                  success.data.data[i].key = id.toString()
+                  sData.value.push(success.data.data[i])
+                }
+
+                message.success('删除成功');
+              }
+            },
+            (error)=>{
+
+            }
+        )
       };
 
       //第二个弹出层默认为否
@@ -223,23 +280,23 @@
       //处理添加弹出层的确认事件
       const handleAddOk = () => {
         //判断是否为空
-        if (start.value === ''){
+        if (start.value == null || start.value == ''){
           message.error('请输入开始学年')
           return false
         }
-        if (end.value === ''){
+        if (end.value == null || end.value == ''){
           message.error('请输入结束学年')
           return false
         }
-        if (whichTerm.value === ''){
+        if (whichTerm.value == null || whichTerm.value == ''){
           message.error('请输入第几学期')
           return false
         }
         const isTerm = ref(false)
-        for (let i = 0;i<data.value.length;i++){
-          if (start.value === data.value[i].startTerm){
-            if (end.value === data.value[i].endTerm){
-              if (whichTerm.value === data.value[i].which){
+        for (let i = 0;i<sData.value.length;i++){
+          if (start.value == sData.value[i].start){
+            if (end.value == sData.value[i].end){
+              if (whichTerm.value == sData.value[i].which){
                 isTerm.value = true
               }
             }
@@ -249,21 +306,30 @@
           message.error('该学期已存在')
           return false
         }
-        //模拟添加
-        const newTerm = {
-          key: Date.now().toString(),
-          id: Date.now(),
-          startTerm: start.value,
-          endTerm: end.value,
-          which: whichTerm.value
-        }
-        //向源数据追加
-        data.value.push(newTerm)
-        message.success('添加成功')
-        visibleTwo.value = false;
+        proxy.$api.get(
+            '/addTerm',
+            {},
+            {'start':start.value,'end':end.value,'which':whichTerm.value},
+            (success)=>{
+              if (success.data.error === 0){
+                sData.value.splice(0,sData.value.length)
+                for (let i in success.data.data){
+                  let id = success.data.data[i].id
+                  success.data.data[i].key = id.toString()
+                  sData.value.push(success.data.data[i])
+                }
+                message.success('添加成功')
+                visibleTwo.value = false;
+              }
+            },
+            (error)=>{
+
+            }
+        )
+
       }
       return {
-        data,
+        sData,
         columns,
         handleSearch,
         handleReset,
