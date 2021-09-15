@@ -1,3 +1,6 @@
+<!--
+系管理
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
@@ -95,7 +98,6 @@ export default defineComponent({
           }
       )
     })
-    //模拟数据，使用TableDataType接口验证数据
 
     //添加系输入框的placeholder
     const departmentNameTips = ref("请输入系名")

@@ -1,3 +1,6 @@
+<!--
+班级端入口
+-->
 <template>
   <div id="header">
     <p>{{whatEnd}} ({{name}})</p>

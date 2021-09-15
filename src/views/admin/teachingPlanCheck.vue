@@ -1,3 +1,6 @@
+<!--
+授课计划情况管理
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
@@ -123,10 +126,9 @@
       };
       //模拟数据，使用TableDataType接口验证数据
       const sData: Ref<TableDataType[]> = ref([]);
-
       //教研室
       const sectionData: any = ref([]);
-
+      /*获取数据*/
       const {proxy}: any = getCurrentInstance()
       onMounted(() => {
         proxy.$api.get(
@@ -343,13 +345,20 @@
           }
         }
       }
+      /*确认修改*/
       const handleModifyOk = () => {
         proxy.$api.get(
             '/updTPlanCheckItem',
             {},
-            {'id':parseInt(_key.value),'plan_progress':Schedule.value,'actual_progress':actualProgress.value,'compare':comparison.value,'reason':causeAnalysis.value},
-            (success)=>{
-              if (success.data.error===0){
+            {
+              'id': parseInt(_key.value),
+              'plan_progress': Schedule.value,
+              'actual_progress': actualProgress.value,
+              'compare': comparison.value,
+              'reason': causeAnalysis.value
+            },
+            (success) => {
+              if (success.data.error === 0) {
                 for (let i = 0; i < itemData.value.length; i++) {
                   if (itemData.value[i].key === _key.value) {
                     itemData.value[i].plan_progress = Schedule.value
@@ -362,24 +371,25 @@
                 message.success('修改成功')
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
 
       }
 
+      //删除子项
       const itemConfirm = (key: string) => {
         proxy.$api.get(
             '/delPlanCheckItem',
             {},
-            {'id':parseInt(key)},
-            (success)=>{
-              if (success.data.error===0){
+            {'id': parseInt(key)},
+            (success) => {
+              if (success.data.error === 0) {
                 itemData.value = itemData.value.filter(item => item.key != key)
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
@@ -400,6 +410,7 @@
       const handleModifySelect = (value: string) => {
         selDepartment.value = value
       };
+      /*确认添加*/
       const handleAddOk = () => {
         if (curSelValue.value === '') {
           message.error('请选择教研室')
@@ -408,9 +419,9 @@
         proxy.$api.get(
             '/addTPlanCheck',
             {},
-            {'staff_id':parseInt(curSelValue.value)},
-            (success)=>{
-              sData.value.splice(0,sData.value.length)
+            {'staff_id': parseInt(curSelValue.value)},
+            (success) => {
+              sData.value.splice(0, sData.value.length)
               for (let i in success.data.data) {
                 let id = success.data.data[i].id
                 success.data.data[i].key = id.toString()
@@ -421,7 +432,7 @@
               curSelValue.value = ''
               visibleTwo.value = false;
             },
-            (error)=>{
+            (error) => {
 
             }
         )

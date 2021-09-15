@@ -1,3 +1,6 @@
+<!--
+作业检查记录
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
@@ -180,6 +183,7 @@
           slots: {customRender: 'operation'},
         },
       ];
+      /*获取数据*/
       const {proxy}: any = getCurrentInstance()
       onMounted(() => {
         proxy.$api.get(
@@ -200,7 +204,7 @@
             }
         )
       })
-      //弹出按钮
+      //导出按钮
       const handleExport = computed(() => (id) => {
         return 'http://119.29.185.52:9001/exportHCI?id=' + parseInt(id);
       })
@@ -284,6 +288,7 @@
       ];
       const itemData: any = ref([])
       const showSee = ref(false)
+      /*查看按钮*/
       const handleSee = (key: string) => {
         proxy.$api.get(
             '/getHomeworkCheckItem',
@@ -306,6 +311,7 @@
         showSee.value = false
       }
 
+      /*子项删除按钮*/
       const itemConfirmDel = (key: string) => {
         proxy.$api.get(
             '/delHomeworkCheckItem',
@@ -333,6 +339,7 @@
       const evaluateVal = ref('')
       const showModify = ref(false)
       const _key = ref()
+      /*修改按钮*/
       const handleModify = (key: string) => {
         showModify.value = true
         _key.value = key
@@ -348,6 +355,7 @@
           }
         }
       }
+      /*确认修改*/
       const handleModifyOk = () => {
         proxy.$api.get(
             '/updHomeworkCheckItem',

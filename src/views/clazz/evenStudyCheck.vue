@@ -1,3 +1,6 @@
+<!--
+版极端晚修检查
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{emptyText: '暂无数据'}">
@@ -154,8 +157,8 @@
       })
       const showSetItem = ref(false)
       const _id = ref()
-      const clazzNum = ref() //教室
-      const sArriveNumOfPeople = ref('') //应到人数
+      const clazzNum = ref()
+      const sArriveNumOfPeople = ref('')
       const numOfPeopleStayOut = ref('')
       const leave = ref('')
       const absent = ref('')
@@ -183,6 +186,8 @@
         showSetItem.value = true
 
       }
+
+      /*班干确认*/
       const handleModifyOk = () => {
         function getNowFormatDate() {
           var date = new Date();

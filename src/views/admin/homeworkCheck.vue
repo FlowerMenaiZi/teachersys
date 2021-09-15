@@ -1,3 +1,6 @@
+<!--
+学期作业管理
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
@@ -126,11 +129,9 @@
       const pagination = {
         pageSize: 5
       };
-      //模拟数据，使用TableDataType接口验证数据
       const {proxy}:any = getCurrentInstance()
       const sData: Ref<TableDataType[]> = ref([]);
-
-      //教研室
+      //获取数据
       const sectionData:any = ref([]);
       onMounted(()=>{
         proxy.$api.get(
@@ -296,10 +297,12 @@
             }
         )
       };
+      /*每一项导出*/
       const handleExport = computed(()=>(id)=>{
         return 'http://119.29.185.52:9001/exportHCI?id='+parseInt(id);
       })
       const itemData:any = ref([])
+      /*查看每一项*/
       const handleSee = (key: string) => {
         showHomeItem.value = true
         proxy.$api.get(
@@ -326,6 +329,7 @@
       const internship = ref('')
       const orderHomeworkNum = ref('')
       const evaluateVal = ref('')
+      /*点击修改*/
       const handleModify = (key: string) => {
         showModify.value = true
         _key.value = key
@@ -341,6 +345,7 @@
           }
         }
       }
+      /*确定修改*/
       const handleModifyOk = () => {
         proxy.$api.get(
             '/updHomeworkCheckItem',
@@ -367,7 +372,7 @@
             }
         )
       }
-      /*删除*/
+      /*删除子项*/
       const itemConfirm = (key:string) =>{
         proxy.$api.get(
             '/delHomeworkCheckItem',

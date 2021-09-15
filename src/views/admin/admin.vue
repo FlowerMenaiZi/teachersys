@@ -1,3 +1,6 @@
+<!--
+后台界面入口
+-->
 <template>
   <div id="header">
     <p>{{whatEnd}} ({{name}})</p>
@@ -150,6 +153,7 @@
       ContactsOutlined,
     },
     setup() {
+      /*设置顶部显示*/
       const whatEnd = ref('管理员端')
       const name = ref('')
       name.value = $store.state.userInfo.user
@@ -163,6 +167,7 @@
       }
       const router = useRouter()
       const {proxy}:any = getCurrentInstance()
+      /*注销操作*/
       const logout = () =>{
         sessionStorage.removeItem('store');
         proxy.$cookie.clearCookie('user');

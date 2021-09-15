@@ -1,3 +1,6 @@
+<!--
+学期管理
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
@@ -88,6 +91,7 @@
       };
       //模拟数据，使用TableDataType接口验证数据
       const sData: Ref<TableDataType[]> = ref([]);
+      /*获取数据*/
       const {proxy}:any = getCurrentInstance()
       onMounted(()=>{
         proxy.$api.get(

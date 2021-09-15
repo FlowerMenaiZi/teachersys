@@ -1,3 +1,6 @@
+<!--
+系统设置
+-->
 <template>
   <div class="content">
     <div class="curTerm">
@@ -29,6 +32,7 @@
       const curTerm: any = ref()
       const {proxy}: any = getCurrentInstance()
       const termItem: any = ref([])
+      /*获取数据*/
       onMounted(() => {
         proxy.$api.get(
             '/getTerm',
@@ -58,6 +62,7 @@
             }
         )
       })
+      /*修改学期*/
       const handleChange = (value: number) => {
         proxy.$api.get(
             '/updCurTerm',
@@ -71,6 +76,7 @@
             }
         )
       }
+      /*修改管理员密码*/
       const password = ref('')
       const repModifyPass = () => {
         if (password.value === '') {

@@ -1,21 +1,24 @@
+<!--
+系晚修检查表
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{emptyText: '暂无数据'}">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
         <a-input
-            ref="searchInput"
-            :placeholder="`查询${column.title}`"
-            :value="selectedKeys[0]"
-            style="width: 188px; margin-bottom: 8px; display: block"
-            @change="e => setSelectedKeys(e.target.value ? [e.target.value] : [])"
-            @pressEnter="handleSearch(selectedKeys, confirm, column.dataIndex)"
+                ref="searchInput"
+                :placeholder="`查询${column.title}`"
+                :value="selectedKeys[0]"
+                style="width: 188px; margin-bottom: 8px; display: block"
+                @change="e => setSelectedKeys(e.target.value ? [e.target.value] : [])"
+                @pressEnter="handleSearch(selectedKeys, confirm, column.dataIndex)"
         />
         <a-button
-            type="primary"
-            size="small"
-            style="width: 90px; margin-right: 8px"
-            @click="handleSearch(selectedKeys, confirm, column.dataIndex)"
+                type="primary"
+                size="small"
+                style="width: 90px; margin-right: 8px"
+                @click="handleSearch(selectedKeys, confirm, column.dataIndex)"
         >
           <template #icon>
             <SearchOutlined/>
@@ -30,17 +33,17 @@
     <template #operation="{ record }">
       <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleCheck(record.key)">录入</a-button>
       <a-popconfirm
-          title="是否确认检查？"
-          ok-text="是"
-          cancel-text="否"
-          @confirm="sureCheck(record.key)">
+              title="是否确认检查？"
+              ok-text="是"
+              cancel-text="否"
+              @confirm="sureCheck(record.key)">
         <a-button type="primary" :style="{margin:'0 10px 0 0'}">确认</a-button>
       </a-popconfirm>
       <a-popconfirm
-          title="是否要删除？"
-          ok-text="是"
-          cancel-text="否"
-          @confirm="confirmDel(record.key)">
+              title="是否要删除？"
+              ok-text="是"
+              cancel-text="否"
+              @confirm="confirmDel(record.key)">
         <a-button type="danger">删除</a-button>
       </a-popconfirm>
     </template>
@@ -115,30 +118,31 @@
   <a-button type="primary" :style="{margin:'30px 0 0 0'}" @click="handleExport">导出某日数据
     <a-modal v-model:visible="visibleExport" title="导出" @ok="handleExportOk" okText="确认" cancelText="取消">
       <label>日期:</label>
-      <a-date-picker style="width: 100%;margin-bottom: 10px" placeholder="请选择日期" :format="format" @change="onExportDateChange" :showToday="false"/>
+      <a-date-picker style="width: 100%;margin-bottom: 10px" placeholder="请选择日期" :format="format"
+                     @change="onExportDateChange" :showToday="false"/>
     </a-modal>
   </a-button>
 </template>
 
 <script lang="ts">
-import {defineComponent, ref, reactive, UnwrapRef, Ref,onMounted,getCurrentInstance} from 'vue';
-import {message} from 'ant-design-vue';
-import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue';
-import {Moment} from 'moment';
-import moment from 'moment'
-import 'moment/locale/zh-cn'
-import $store from "../../../store/index"
+  import {defineComponent, ref, reactive, UnwrapRef, Ref, onMounted, getCurrentInstance} from 'vue';
+  import {message} from 'ant-design-vue';
+  import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue';
+  import {Moment} from 'moment';
+  import moment from 'moment'
+  import 'moment/locale/zh-cn'
+  import $store from "../../../store/index"
 
-moment.locale('zh-cn')
+  moment.locale('zh-cn')
 
-interface TableDataType {
-  key: string;
-  id: number;
-  date: string;
-  teacher:string;
-  teacher_id:number;
-  check_at: string;
-}
+  interface TableDataType {
+    key: string;
+    id: number;
+    date: string;
+    teacher: string;
+    teacher_id: number;
+    check_at: string;
+  }
 
   export default defineComponent({
     name: "evenStudyCheck",
@@ -233,14 +237,15 @@ interface TableDataType {
       //模拟数据，使用TableDataType接口验证数据
       const sData: Ref<TableDataType[]> = ref([]);
       const itemData: any = ref([])
-      const {proxy}:any = getCurrentInstance()
-      onMounted(()=>{
+      /*获取数据*/
+      const {proxy}: any = getCurrentInstance()
+      onMounted(() => {
         proxy.$api.get(
             '/getSEvenCheck',
             {},
-            {"id":$store.state.userInfo.id},
-            (success)=>{
-              if (success.data.error === 0){
+            {"id": $store.state.userInfo.id},
+            (success) => {
+              if (success.data.error === 0) {
                 for (let i in success.data.data) {
                   let id = success.data.data[i].id
                   success.data.data[i].key = id.toString()
@@ -248,14 +253,15 @@ interface TableDataType {
                 }
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
       })
 
-      const showAllItem = ref(false)
-      const handleCheck = (key:string) =>{
+      const showAllItem = ref(false);
+      /*点击查看*/
+      const handleCheck = (key: string) => {
         proxy.$api.get(
             '/getEvenCheckItem',
             {},
@@ -274,7 +280,7 @@ interface TableDataType {
             }
         )
       }
-      const handleOk = () =>{
+      const handleOk = () => {
         showAllItem.value = false
       }
       //确认删除
@@ -292,7 +298,8 @@ interface TableDataType {
             }
         )
       };
-      const itemConfirm = (key: string) =>{
+      /*子项删除*/
+      const itemConfirm = (key: string) => {
         proxy.$api.get(
             '/delEvenCheckItem',
             {},
@@ -307,9 +314,9 @@ interface TableDataType {
       }
 
       const showSetItem = ref(false)
-      const room = ref('') //教室
-      const sArriveNumOfPeople = ref('') //应到人数
-      const numOfPeopleStayOut = ref('') //
+      const room = ref('')
+      const sArriveNumOfPeople = ref('')
+      const numOfPeopleStayOut = ref('')
       const leave = ref('')
       const absent = ref('')
       const studentCadres = ref('')
@@ -326,7 +333,8 @@ interface TableDataType {
       const teacherOnDutyCon = ref('')
       //设置当前点击的key值为空
       const _key = ref()
-      const handleModify = (key:string) =>{
+      //点击修改
+      const handleModify = (key: string) => {
         for (let i in itemData.value) {
           if (itemData.value[i].key === key) {
             _key.value = key
@@ -351,10 +359,12 @@ interface TableDataType {
           }
         }
       }
+      /*计算总分*/
       const calcTotalScore = () => {
         totalScore.value = numberScore.value + clazzDisScore.value + learnAtmScore.value + clazzHygieneScore.value
       }
-      const handleMOk = () =>{
+      //确认修改
+      const handleMOk = () => {
         proxy.$api.get(
             '/updEvenCheckItem',
             {},
@@ -409,14 +419,14 @@ interface TableDataType {
             }
         )
       }
-
-      const sureCheck = (key:string)=>{
+      /*确认检查*/
+      const sureCheck = (key: string) => {
         function getNowFormatDate() {
           var date = new Date();
           var seperator1 = "-";
           var year = date.getFullYear();
-          var month:any = date.getMonth() + 1;
-          var strDate:any = date.getDate();
+          var month: any = date.getMonth() + 1;
+          var strDate: any = date.getDate();
           let hh = new Date().getHours()
           let mf = new Date().getMinutes() < 10 ? '0' + new Date().getMinutes() : new Date().getMinutes()
           let ss = new Date().getSeconds() < 10 ? '0' + new Date().getSeconds() : new Date().getSeconds()
@@ -429,24 +439,26 @@ interface TableDataType {
           var currentdate = year + seperator1 + month + seperator1 + strDate + ' ' + hh + ':' + mf + ':' + ss;
           return currentdate;
         }
+
         let checkDay = ''
-        for (let i in sData.value){
-          if (sData.value[i].key === key){
-            checkDay = sData.value[i].check_at?sData.value[i].check_at:getNowFormatDate()
+        for (let i in sData.value) {
+          if (sData.value[i].key === key) {
+            checkDay = sData.value[i].check_at ? sData.value[i].check_at : getNowFormatDate()
           }
         }
         proxy.$api.get(
             '/checkEvenStudy',
             {},
-            {'id':parseInt(key),'check_at':checkDay},
-            (success)=>{
-              for (let i in sData.value){
-                if (sData.value[i].key === key){
+            {'id': parseInt(key), 'check_at': checkDay},
+            (success) => {
+              for (let i in sData.value) {
+                if (sData.value[i].key === key) {
                   sData.value[i].check_at = checkDay
                 }
               }
             },
-            (error)=>{}
+            (error) => {
+            }
         )
       }
 
@@ -457,13 +469,13 @@ interface TableDataType {
         visibleExport.value = true;
       }
       const exportDate = ref('')
-      const onExportDateChange = (value: Moment[], dateString: string) =>{
+      const onExportDateChange = (value: Moment[], dateString: string) => {
         exportDate.value = dateString
       }
       //处理添加弹出层的确认事件
       const handleExportOk = () => {
         //判断是否为空
-        if (exportDate.value === ''){
+        if (exportDate.value === '') {
           message.error('请选择导出的日期')
           return false
         }

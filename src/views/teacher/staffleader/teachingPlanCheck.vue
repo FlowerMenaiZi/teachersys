@@ -1,3 +1,6 @@
+<!--
+授课计划检查
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
@@ -80,20 +83,21 @@
              v-model:value="causeAnalysis"></a-input>
   </a-modal>
   <a-popconfirm
-      title="是否要新增？"
-      ok-text="确定"
-      cancel-text="取消"
-      @confirm="handleConfirmInsert()"
+          title="是否要新增？"
+          ok-text="确定"
+          cancel-text="取消"
+          @confirm="handleConfirmInsert()"
   >
     <a-button type="primary">新增</a-button>
   </a-popconfirm>
 </template>
 
 <script lang="ts">
-  import {defineComponent, reactive, ref, Ref,getCurrentInstance,onMounted,computed} from 'vue';
+  import {defineComponent, reactive, ref, Ref, getCurrentInstance, onMounted, computed} from 'vue';
   import {message} from 'ant-design-vue';
   import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue';
   import $store from "../../../store/index"
+
   //设置接收数据的接口
   interface TableDataType {
     key: string;
@@ -104,6 +108,7 @@
     teacher_id: number;
     teacher: string;
   }
+
   export default defineComponent({
     name: "teachingPlanCheck",
     components: {
@@ -125,23 +130,23 @@
       };
       /*第一个弹出层*/
       const sData: Ref<TableDataType[]> = ref([]);
-
-      const {proxy}:any = getCurrentInstance()
-      onMounted(()=>{
+      /*获取数据*/
+      const {proxy}: any = getCurrentInstance()
+      onMounted(() => {
         proxy.$api.get(
             '/teachingPlanItem',
             {},
-            {'id':$store.state.userInfo.id},
-            (success)=>{
+            {'id': $store.state.userInfo.id},
+            (success) => {
               sData.value.splice(0, sData.value.length)
               for (let i in success.data.data) {
                 let id = success.data.data[i].id
                 success.data.data[i].key = id.toString()
-                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0, 10)
                 sData.value.push(success.data.data[i])
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
@@ -214,14 +219,15 @@
           slots: {customRender: 'operation'},
         },
       ]
-      const itemData:any = ref([])
+      const itemData: any = ref([])
       const showAllItem = ref(false)
-      const handleSee = (key:string) =>{
+      /*点击查看*/
+      const handleSee = (key: string) => {
         proxy.$api.get(
             '/getPCheckItem',
             {},
-            {'id':parseInt(key)},
-            (success)=>{
+            {'id': parseInt(key)},
+            (success) => {
               if (success.data.error === 0) {
                 showAllItem.value = true
                 itemData.value.splice(0, itemData.value.length)
@@ -232,24 +238,25 @@
                 }
               }
             },
-            (error)=>{}
+            (error) => {
+            }
         )
       }
-      const handleSeeOk = () =>{
+      const handleSeeOk = () => {
         showAllItem.value = false
       }
       const _key = ref()
-      //弹出按钮
+      //导出按钮
       const handleExport = computed(() => (id) => {
         return 'http://119.29.185.52:9001/exportPlanCheck?id=' + parseInt(id);
       })
       //确认按钮
-      const handleConfirmTime = (key:string) =>{
+      const handleConfirmTime = (key: string) => {
         proxy.$api.get(
             '/checkPlanCheck',
             {},
-            {'id':parseInt(key),'teacher_id':$store.state.userInfo.id},
-            (success)=>{
+            {'id': parseInt(key), 'teacher_id': $store.state.userInfo.id},
+            (success) => {
               if (success.data.error === 0) {
                 for (let i in sData.value) {
                   if (sData.value[i].key === key) {
@@ -258,18 +265,18 @@
                 }
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
       }
       //删除按钮
-      const handleConfirmDel = (key:string) => {
+      const handleConfirmDel = (key: string) => {
         proxy.$api.get(
             '/delTeachingPlan',
             {},
-            {'id':parseInt(key)},
-            (success)=>{
+            {'id': parseInt(key)},
+            (success) => {
               if (success.data.error === 0) {
                 sData.value = sData.value.filter(item => item.key != key)
                 message.success('删除成功')
@@ -277,7 +284,7 @@
                 message.success('删除失败')
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
@@ -289,7 +296,8 @@
       const actualProgress = ref('')
       const comparison = ref('')
       const causeAnalysis = ref('')
-      const handleModify = (key:string) =>{
+      /*点击修改*/
+      const handleModify = (key: string) => {
         _key.value = key
         showModifyItem.value = true
         for (let i = 0; i < itemData.value.length; i++) {
@@ -301,13 +309,20 @@
           }
         }
       }
-      const handleModifyOk = () =>{
+      /*确认修改*/
+      const handleModifyOk = () => {
         proxy.$api.get(
             '/updTPlanCheckItem',
             {},
-            {'id':parseInt(_key.value),'plan_progress':schedule.value,'actual_progress':actualProgress.value,'compare':comparison.value,'reason':causeAnalysis.value},
-            (success)=>{
-              if (success.data.error===0){
+            {
+              'id': parseInt(_key.value),
+              'plan_progress': schedule.value,
+              'actual_progress': actualProgress.value,
+              'compare': comparison.value,
+              'reason': causeAnalysis.value
+            },
+            (success) => {
+              if (success.data.error === 0) {
                 for (let i = 0; i < itemData.value.length; i++) {
                   if (itemData.value[i].key === _key.value) {
                     itemData.value[i].plan_progress = schedule.value
@@ -320,31 +335,31 @@
                 message.success('修改成功')
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
       }
-
-      const itemConfirmDel = (key:string) =>{
+      /*子项删除*/
+      const itemConfirmDel = (key: string) => {
         proxy.$api.get(
             '/delPlanCheckItem',
             {},
-            {'id':parseInt(key)},
-            (success)=>{
-              if (success.data.error === 0){
+            {'id': parseInt(key)},
+            (success) => {
+              if (success.data.error === 0) {
                 itemData.value = itemData.value.filter(item => item.key != key)
                 message.success('删除成功')
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
       }
 
       /*新增*/
-      const handleConfirmInsert = () =>{
+      const handleConfirmInsert = () => {
         //  进行新增操作
         proxy.$api.get(
             '/tSAddPlanCheck',

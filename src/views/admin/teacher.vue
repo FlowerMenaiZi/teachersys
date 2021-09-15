@@ -1,3 +1,6 @@
+<!--
+教师管理
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
@@ -103,9 +106,9 @@ export default defineComponent({
     const pagination = {
       pageSize: 5
     };
-    //模拟数据，使用TableDataType接口验证数据
     const sData: Ref<TableDataType[]> = ref([]);
     const sectionData:any = ref([]);
+    /*获取数据*/
     const {proxy}: any = getCurrentInstance()
     onMounted(() => {
       proxy.$api.get(
@@ -113,6 +116,7 @@ export default defineComponent({
           {},
           {},
           (success) => {
+            console.log(success);
             for (let i in success.data.data) {
               let id = success.data.data[i].id
               success.data.data[i].key = id.toString()

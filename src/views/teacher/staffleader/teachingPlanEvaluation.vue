@@ -1,21 +1,24 @@
+<!--
+教案评测记录表
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
       <div style="padding: 8px">
         <a-input
-            ref="searchInput"
-            :placeholder="`查询${column.title}`"
-            :value="selectedKeys[0]"
-            style="width: 188px; margin-bottom: 8px; display: block"
-            @change="e => setSelectedKeys(e.target.value ? [e.target.value] : [])"
-            @pressEnter="handleSearch(selectedKeys, confirm, column.dataIndex)"
+                ref="searchInput"
+                :placeholder="`查询${column.title}`"
+                :value="selectedKeys[0]"
+                style="width: 188px; margin-bottom: 8px; display: block"
+                @change="e => setSelectedKeys(e.target.value ? [e.target.value] : [])"
+                @pressEnter="handleSearch(selectedKeys, confirm, column.dataIndex)"
         />
         <a-button
-            type="primary"
-            size="small"
-            style="width: 90px; margin-right: 8px"
-            @click="handleSearch(selectedKeys, confirm, column.dataIndex)"
+                type="primary"
+                size="small"
+                style="width: 90px; margin-right: 8px"
+                @click="handleSearch(selectedKeys, confirm, column.dataIndex)"
         >
           <template #icon>
             <SearchOutlined/>
@@ -36,10 +39,10 @@
       <a-button type="primary" :style="{margin:'0 10px 0 0'}" @click="handleConfirmTime(record.key)">确认
       </a-button>
       <a-popconfirm
-          title="是否要删除？"
-          ok-text="是"
-          cancel-text="否"
-          @confirm="handleConfirmDel(record.key)"
+              title="是否要删除？"
+              ok-text="是"
+              cancel-text="否"
+              @confirm="handleConfirmDel(record.key)"
       >
         <a-button type="danger">删除</a-button>
       </a-popconfirm>
@@ -54,10 +57,10 @@
           修改
         </a-button>
         <a-popconfirm
-            title="是否要删除？"
-            ok-text="是"
-            cancel-text="否"
-            @confirm="itemConfirmDel(record.key)"
+                title="是否要删除？"
+                ok-text="是"
+                cancel-text="否"
+                @confirm="itemConfirmDel(record.key)"
         >
           <a-button type="danger">删除</a-button>
         </a-popconfirm>
@@ -88,385 +91,401 @@
     </a-input-group>
   </a-modal>
   <a-popconfirm
-      title="是否要新增？"
-      ok-text="确定"
-      cancel-text="取消"
-      @confirm="handleConfirmInsert()"
+          title="是否要新增？"
+          ok-text="确定"
+          cancel-text="取消"
+          @confirm="handleConfirmInsert()"
   >
     <a-button type="primary">新增</a-button>
   </a-popconfirm>
 </template>
 
 <script lang="ts">
-import {defineComponent, reactive, ref, Ref,getCurrentInstance,onMounted,computed} from 'vue';
-import {message} from 'ant-design-vue';
-import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue';
-import $store from "../../../store/index"
+  import {defineComponent, reactive, ref, Ref, getCurrentInstance, onMounted, computed} from 'vue';
+  import {message} from 'ant-design-vue';
+  import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue';
+  import $store from "../../../store/index"
 
-//设置接收数据的接口
-interface TableDataType {
-  key: string;
-  created_at: string;
-  term: string;
-  staff: string;
-  staff_id: number;
-  teacher: string;
-  teacher_id: number;
-}
-
-export default defineComponent({
-  name: "teachingPlanEvaluation",
-  components: {
-    SearchOutlined,
-    CheckOutlined,
-    EditOutlined,
-  },
-
-  setup() {
-    //搜索框
-    const searchInput = ref();
-    //搜索框状态
-    const state = reactive({
-      searchText: '',
-      searchedColumn: '',
-    });
-    //分页数
-    const pagination = {
-      pageSize: 5
-    };
-    /*第一个弹出层*/
-    const sData: Ref<TableDataType[]> = ref([])
-    const columns = [
-      {
-        title: '日期',
-        dataIndex: 'created_at',
-        defaultSortOrder: 'false',
-        sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.created_at) - Date.parse(b.created_at),
-      },
-      {
-        title: '学期',
-        dataIndex: 'term',
-        slots: {
-          filterDropdown: 'filterDropdown',
-          filterIcon: 'filterIcon',
-          customRender: 'customRender',
-        },
-        onFilter: (value: string, record: TableDataType) =>
-            record.term.toString().toLowerCase().includes(value.toLowerCase()),
-        onFilterDropdownVisibleChange: (visible: any) => {
-          if (visible) {
-            setTimeout(() => {
-              searchInput.value.focus();
-            }, 0);
-          }
-        },
-      },
-      {
-        title: '检查人',
-        dataIndex: 'teacher',
-        slots: {
-          filterDropdown: 'filterDropdown',
-          filterIcon: 'filterIcon',
-          customRender: 'customRender',
-        },
-        onFilter: (value: string, record: TableDataType) =>
-            record.teacher.toString().toLowerCase().includes(value.toLowerCase()),
-        onFilterDropdownVisibleChange: (visible: any) => {
-          if (visible) {
-            setTimeout(() => {
-              searchInput.value.focus();
-            }, 0);
-          }
-        },
-      },
-      {
-        title: '操作',
-        dataIndex: 'operation',
-        slots: {customRender: 'operation'},
-      },
-    ];
-    const {proxy}:any = getCurrentInstance()
-    onMounted(()=>{
-      proxy.$api.get(
-          '/getTSEvaluation',
-          {},
-          {'id':$store.state.userInfo.id},
-          (success) => {
-            sData.value.splice(0, sData.value.length)
-            for (let i in success.data.data) {
-              let id = success.data.data[i].id
-              success.data.data[i].key = id.toString()
-              success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
-              sData.value.push(success.data.data[i])
-            }
-          },
-          (error) => {
-            console.log(error);
-          }
-      )
-    })
-    /*第二个弹出层*/
-    const columns2 = [
-      {title: '教师姓名', width: 100, dataIndex: 'teacher', key: 'teacher', fixed: 'left', align: 'center'},
-      {title: '课程', dataIndex: 'course', key: 'course', width: 140, fixed: 'left', align: 'center'},
-      {title: '教案上传（审批）情况（10%）', dataIndex: 'upload_score', key: 'upload_score', width: 140, align: 'center',
-        onCell: () => {
-          return {
-            style: {
-              maxWidth: 140,
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              textOverflow:'ellipsis',
-              cursor:'pointer'
-            }
-          }
-        },
-        ellipsis: true,
-      },
-      {title: '教案格式规范性（10%）', dataIndex: 'format_score', key: 'format_score', width: 140, align: 'center',
-        onCell: () => {
-          return {
-            style: {
-              maxWidth: 140,
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              textOverflow:'ellipsis',
-              cursor:'pointer'
-            }
-          }
-        },
-        ellipsis: true,
-      },
-      {title: '教学内容完整性（40%）', dataIndex: 'complete_score', key: 'complete_score', width: 140, align: 'center',
-        onCell: () => {
-          return {
-            style: {
-              maxWidth: 140,
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              textOverflow:'ellipsis',
-              cursor:'pointer'
-            }
-          }
-        },
-        ellipsis: true,
-      },
-      {title: '教学设计科学性（40%）', dataIndex: 'design_score', key: 'design_score', width: 140, align: 'center',
-        onCell: () => {
-          return {
-            style: {
-              maxWidth: 140,
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              textOverflow:'ellipsis',
-              cursor:'pointer'
-            }
-          }
-        },
-        ellipsis: true,
-      },
-      {title: '合计', dataIndex: 'total_score', key: 'total_score', width: 100, align: 'center'},
-      {
-        title: '操作',
-        dataIndex: 'operation',
-        key: 'operation',
-        fixed: 'right',
-        width: 120,
-        slots: {customRender: 'operation'},
-      },
-    ]
-    const itemData:any = ref([])
-    const _key = ref()
-    const showSee = ref(false)
-    const handleSee = ( key: string) => {
-      proxy.$api.get(
-          '/getTEvaluationItem',
-          {},
-          {'id':parseInt(key)},
-          (success)=>{
-            showSee.value = true
-            itemData.value.splice(0, itemData.value.length)
-            for (let i in success.data.data) {
-              let id = success.data.data[i].id
-              success.data.data[i].key = id.toString()
-              itemData.value.push(success.data.data[i])
-            }
-          },
-          (error)=>{
-
-          }
-      )
-    }
-    const handleSeeOk = () => {
-      showSee.value = false
-    }
-    //弹出按钮
-    const handleExport = computed(()=>(id)=>{
-      return 'http://119.29.185.52:9001/exportTEvaluation?id='+parseInt(id);
-    })
-    //确认按钮
-    const handleConfirmTime = (key: string) => {
-      proxy.$api.get(
-          '/checkTeachingEval',
-          {},
-          {'id':parseInt(key),'teacher_id':$store.state.userInfo.id},
-          (success)=>{
-            if (success.data.error === 0) {
-              for (let i in sData.value) {
-                if (sData.value[i].key === key) {
-                  sData.value[i].teacher = $store.state.userInfo.user
-                }
-              }
-            }
-          },
-          (error)=>{
-
-          }
-      )
-    }
-    //删除按钮
-    const handleConfirmDel = (key: string) => {
-      proxy.$api.get(
-          '/delTEvaluation',
-          {},
-          {'id':parseInt(key)},
-          (success)=>{
-            if (success.data.error === 0) {
-              sData.value = sData.value.filter(item => item.key != key)
-              message.success('删除成功')
-            } else {
-              message.success('删除失败')
-            }
-          },
-          (error)=>{
-
-          }
-      )
-    }
-
-    const itemConfirmDel = (key: string) => {
-      proxy.$api.get(
-          '/delTEvaluationItem',
-          {},
-          {'id':parseInt(key)},
-          (success)=>{
-            if (success.data.error === 0){
-              itemData.value = itemData.value.filter(item => item.key != key)
-              message.success('删除成功')
-            }
-          },
-          (error)=>{
-
-          }
-      )
-    }
-
-    /*第三个弹出层*/
-    //处理修改函数，传入key值
-    const uploadScore = ref('')
-    const formatScore = ref('')
-    const completeScore = ref('')
-    const designScore = ref('')
-    const totalScore = ref('')
-    const showModify = ref(false)
-    const handleModify = (key: string) => {
-      _key.value = key
-      //显示弹出层
-      for (let i = 0; i < itemData.value.length; i++) {
-        if (itemData.value[i].key === _key.value) {
-          uploadScore.value = itemData.value[i].upload_score
-          formatScore.value = itemData.value[i].format_score
-          completeScore.value = itemData.value[i].complete_score
-          designScore.value = itemData.value[i].design_score
-          totalScore.value = itemData.value[i].total_score
-        }
-      }
-      showModify.value = true
-    }
-    const calcTotalScore = () => {
-      totalScore.value = uploadScore.value + formatScore.value + completeScore.value + designScore.value
-    }
-    const handleModifyOk = () => {
-      proxy.$api.get(
-          '/updTEvaluationItem',
-          {},
-          {'id':parseInt(_key.value),'upload_score':uploadScore.value,'format_score':formatScore.value,'complete_score':completeScore.value,'design_score':designScore.value,'total_score':totalScore.value},
-          (success)=>{
-            if (success.data.error === 0){
-              for (let i = 0; i < itemData.value.length; i++) {
-                if (itemData.value[i].key === _key.value) {
-                  itemData.value[i].upload_score = uploadScore.value
-                  itemData.value[i].format_score = formatScore.value
-                  itemData.value[i].complete_score = completeScore.value
-                  itemData.value[i].design_score = designScore.value
-                  itemData.value[i].total_score = totalScore.value
-                }
-              }
-              showModify.value = false
-              message.success('修改成功')
-            }else{
-              message.error('修改失败')
-            }
-          },
-          (error)=>{
-
-          }
-      )
-    }
-
-    /*新增*/
-    const handleConfirmInsert = () =>{
-      //  进行新增操作
-      proxy.$api.get(
-          '/tAddTEvaluation',
-          {},
-          {'id':$store.state.userInfo.id},
-          (success)=>{
-            for (let i in success.data.data) {
-              let id = success.data.data[i].id
-              success.data.data[i].key = id.toString()
-              success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
-              sData.value.push(success.data.data[i])
-            }
-            message.success('新增成功')
-          },
-          (error)=>{
-
-          }
-      )
-    }
-    return {
-      searchInput,
-      state,
-      pagination,
-      columns,
-      sData,
-      handleExport,
-      handleConfirmTime,
-      handleConfirmDel,
-
-      columns2,
-      showSee,
-      itemData,
-      handleSee,
-      handleSeeOk,
-      itemConfirmDel,
-
-
-      handleModify,
-      handleModifyOk,
-      calcTotalScore,
-      uploadScore,
-      formatScore,
-      completeScore,
-      designScore,
-      totalScore,
-      showModify,
-
-      handleConfirmInsert,
-    }
+  //设置接收数据的接口
+  interface TableDataType {
+    key: string;
+    created_at: string;
+    term: string;
+    staff: string;
+    staff_id: number;
+    teacher: string;
+    teacher_id: number;
   }
-})
+
+  export default defineComponent({
+    name: "teachingPlanEvaluation",
+    components: {
+      SearchOutlined,
+      CheckOutlined,
+      EditOutlined,
+    },
+
+    setup() {
+      //搜索框
+      const searchInput = ref();
+      //搜索框状态
+      const state = reactive({
+        searchText: '',
+        searchedColumn: '',
+      });
+      //分页数
+      const pagination = {
+        pageSize: 5
+      };
+      /*第一个弹出层*/
+      const sData: Ref<TableDataType[]> = ref([])
+      const columns = [
+        {
+          title: '日期',
+          dataIndex: 'created_at',
+          defaultSortOrder: 'false',
+          sorter: (a: TableDataType, b: TableDataType) => Date.parse(a.created_at) - Date.parse(b.created_at),
+        },
+        {
+          title: '学期',
+          dataIndex: 'term',
+          slots: {
+            filterDropdown: 'filterDropdown',
+            filterIcon: 'filterIcon',
+            customRender: 'customRender',
+          },
+          onFilter: (value: string, record: TableDataType) =>
+              record.term.toString().toLowerCase().includes(value.toLowerCase()),
+          onFilterDropdownVisibleChange: (visible: any) => {
+            if (visible) {
+              setTimeout(() => {
+                searchInput.value.focus();
+              }, 0);
+            }
+          },
+        },
+        {
+          title: '检查人',
+          dataIndex: 'teacher',
+          slots: {
+            filterDropdown: 'filterDropdown',
+            filterIcon: 'filterIcon',
+            customRender: 'customRender',
+          },
+          onFilter: (value: string, record: TableDataType) =>
+              record.teacher.toString().toLowerCase().includes(value.toLowerCase()),
+          onFilterDropdownVisibleChange: (visible: any) => {
+            if (visible) {
+              setTimeout(() => {
+                searchInput.value.focus();
+              }, 0);
+            }
+          },
+        },
+        {
+          title: '操作',
+          dataIndex: 'operation',
+          slots: {customRender: 'operation'},
+        },
+      ];
+      /*获取数据*/
+      const {proxy}: any = getCurrentInstance()
+      onMounted(() => {
+        proxy.$api.get(
+            '/getTSEvaluation',
+            {},
+            {'id': $store.state.userInfo.id},
+            (success) => {
+              sData.value.splice(0, sData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0, 10)
+                sData.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
+              console.log(error);
+            }
+        )
+      })
+      /*第二个弹出层*/
+      const columns2 = [
+        {title: '教师姓名', width: 100, dataIndex: 'teacher', key: 'teacher', fixed: 'left', align: 'center'},
+        {title: '课程', dataIndex: 'course', key: 'course', width: 140, fixed: 'left', align: 'center'},
+        {
+          title: '教案上传（审批）情况（10%）', dataIndex: 'upload_score', key: 'upload_score', width: 140, align: 'center',
+          onCell: () => {
+            return {
+              style: {
+                maxWidth: 140,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+                cursor: 'pointer'
+              }
+            }
+          },
+          ellipsis: true,
+        },
+        {
+          title: '教案格式规范性（10%）', dataIndex: 'format_score', key: 'format_score', width: 140, align: 'center',
+          onCell: () => {
+            return {
+              style: {
+                maxWidth: 140,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+                cursor: 'pointer'
+              }
+            }
+          },
+          ellipsis: true,
+        },
+        {
+          title: '教学内容完整性（40%）', dataIndex: 'complete_score', key: 'complete_score', width: 140, align: 'center',
+          onCell: () => {
+            return {
+              style: {
+                maxWidth: 140,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+                cursor: 'pointer'
+              }
+            }
+          },
+          ellipsis: true,
+        },
+        {
+          title: '教学设计科学性（40%）', dataIndex: 'design_score', key: 'design_score', width: 140, align: 'center',
+          onCell: () => {
+            return {
+              style: {
+                maxWidth: 140,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                textOverflow: 'ellipsis',
+                cursor: 'pointer'
+              }
+            }
+          },
+          ellipsis: true,
+        },
+        {title: '合计', dataIndex: 'total_score', key: 'total_score', width: 100, align: 'center'},
+        {
+          title: '操作',
+          dataIndex: 'operation',
+          key: 'operation',
+          fixed: 'right',
+          width: 120,
+          slots: {customRender: 'operation'},
+        },
+      ]
+      const itemData: any = ref([])
+      const _key = ref()
+      const showSee = ref(false)
+      /*查看按钮*/
+      const handleSee = (key: string) => {
+        proxy.$api.get(
+            '/getTEvaluationItem',
+            {},
+            {'id': parseInt(key)},
+            (success) => {
+              showSee.value = true
+              itemData.value.splice(0, itemData.value.length)
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                itemData.value.push(success.data.data[i])
+              }
+            },
+            (error) => {
+
+            }
+        )
+      }
+      const handleSeeOk = () => {
+        showSee.value = false
+      }
+      //导出按钮
+      const handleExport = computed(() => (id) => {
+        return 'http://119.29.185.52:9001/exportTEvaluation?id=' + parseInt(id);
+      })
+      //确认按钮
+      const handleConfirmTime = (key: string) => {
+        proxy.$api.get(
+            '/checkTeachingEval',
+            {},
+            {'id': parseInt(key), 'teacher_id': $store.state.userInfo.id},
+            (success) => {
+              if (success.data.error === 0) {
+                for (let i in sData.value) {
+                  if (sData.value[i].key === key) {
+                    sData.value[i].teacher = $store.state.userInfo.user
+                  }
+                }
+              }
+            },
+            (error) => {
+
+            }
+        )
+      }
+      //删除按钮
+      const handleConfirmDel = (key: string) => {
+        proxy.$api.get(
+            '/delTEvaluation',
+            {},
+            {'id': parseInt(key)},
+            (success) => {
+              if (success.data.error === 0) {
+                sData.value = sData.value.filter(item => item.key != key)
+                message.success('删除成功')
+              } else {
+                message.success('删除失败')
+              }
+            },
+            (error) => {
+
+            }
+        )
+      }
+      //子项删除按钮
+      const itemConfirmDel = (key: string) => {
+        proxy.$api.get(
+            '/delTEvaluationItem',
+            {},
+            {'id': parseInt(key)},
+            (success) => {
+              if (success.data.error === 0) {
+                itemData.value = itemData.value.filter(item => item.key != key)
+                message.success('删除成功')
+              }
+            },
+            (error) => {
+
+            }
+        )
+      }
+
+      /*第三个弹出层*/
+      //处理修改函数，传入key值
+      const uploadScore = ref('')
+      const formatScore = ref('')
+      const completeScore = ref('')
+      const designScore = ref('')
+      const totalScore = ref('')
+      const showModify = ref(false)
+      //点击修改
+      const handleModify = (key: string) => {
+        _key.value = key
+        //显示弹出层
+        for (let i = 0; i < itemData.value.length; i++) {
+          if (itemData.value[i].key === _key.value) {
+            uploadScore.value = itemData.value[i].upload_score
+            formatScore.value = itemData.value[i].format_score
+            completeScore.value = itemData.value[i].complete_score
+            designScore.value = itemData.value[i].design_score
+            totalScore.value = itemData.value[i].total_score
+          }
+        }
+        showModify.value = true
+      }
+      //算计总分
+      const calcTotalScore = () => {
+        totalScore.value = uploadScore.value + formatScore.value + completeScore.value + designScore.value
+      }
+      //确认修改
+      const handleModifyOk = () => {
+        proxy.$api.get(
+            '/updTEvaluationItem',
+            {},
+            {
+              'id': parseInt(_key.value),
+              'upload_score': uploadScore.value,
+              'format_score': formatScore.value,
+              'complete_score': completeScore.value,
+              'design_score': designScore.value,
+              'total_score': totalScore.value
+            },
+            (success) => {
+              if (success.data.error === 0) {
+                for (let i = 0; i < itemData.value.length; i++) {
+                  if (itemData.value[i].key === _key.value) {
+                    itemData.value[i].upload_score = uploadScore.value
+                    itemData.value[i].format_score = formatScore.value
+                    itemData.value[i].complete_score = completeScore.value
+                    itemData.value[i].design_score = designScore.value
+                    itemData.value[i].total_score = totalScore.value
+                  }
+                }
+                showModify.value = false
+                message.success('修改成功')
+              } else {
+                message.error('修改失败')
+              }
+            },
+            (error) => {
+
+            }
+        )
+      }
+
+      /*新增*/
+      const handleConfirmInsert = () => {
+        //  进行新增操作
+        proxy.$api.get(
+            '/tAddTEvaluation',
+            {},
+            {'id': $store.state.userInfo.id},
+            (success) => {
+              for (let i in success.data.data) {
+                let id = success.data.data[i].id
+                success.data.data[i].key = id.toString()
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0, 10)
+                sData.value.push(success.data.data[i])
+              }
+              message.success('新增成功')
+            },
+            (error) => {
+
+            }
+        )
+      }
+      return {
+        searchInput,
+        state,
+        pagination,
+        columns,
+        sData,
+        handleExport,
+        handleConfirmTime,
+        handleConfirmDel,
+
+        columns2,
+        showSee,
+        itemData,
+        handleSee,
+        handleSeeOk,
+        itemConfirmDel,
+
+
+        handleModify,
+        handleModifyOk,
+        calcTotalScore,
+        uploadScore,
+        formatScore,
+        completeScore,
+        designScore,
+        totalScore,
+        showModify,
+
+        handleConfirmInsert,
+      }
+    }
+  })
 </script>
 
 <style scoped>

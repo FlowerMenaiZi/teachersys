@@ -1,3 +1,6 @@
+<!--
+教案评测记录管理
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
@@ -100,14 +103,14 @@
 </template>
 
 <script lang="ts">
-  import {defineComponent, reactive, ref, Ref,getCurrentInstance,onMounted,computed} from 'vue';
+  import {defineComponent, reactive, ref, Ref, getCurrentInstance, onMounted, computed} from 'vue';
   import {message} from 'ant-design-vue';
   import {CheckOutlined, EditOutlined, SearchOutlined} from '@ant-design/icons-vue';
 
   //设置接收数据的接口
   interface TableDataType {
     key: string;
-    id:number;
+    id: number;
     created_at: string;
     term: string;
     staff: string;
@@ -131,11 +134,12 @@
       }
       //模拟数据，使用TableDataType接口验证数据
       const sData: Ref<TableDataType[]> = ref([])
-      const itemData:any = ref([])
+      const itemData: any = ref([])
       //教研室
-      const sectionData:any = ref([])
-      const {proxy}:any = getCurrentInstance()
-      onMounted(()=>{
+      const sectionData: any = ref([])
+      /*获取数据*/
+      const {proxy}: any = getCurrentInstance()
+      onMounted(() => {
         proxy.$api.get(
             '/getStaff',
             {},
@@ -157,7 +161,7 @@
               for (let i in success.data.data) {
                 let id = success.data.data[i].id
                 success.data.data[i].key = id.toString()
-                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0, 10)
                 sData.value.push(success.data.data[i])
               }
             },
@@ -242,57 +246,61 @@
       const columns2 = [
         {title: '教师姓名', width: 100, dataIndex: 'teacher', key: 'teacher', fixed: 'left', align: 'center'},
         {title: '课程', dataIndex: 'course', key: 'course', width: 140, fixed: 'left', align: 'center'},
-        {title: '教案上传（审批）情况（10%）', dataIndex: 'upload_score', key: 'upload_score', width: 140, align: 'center',
+        {
+          title: '教案上传（审批）情况（10%）', dataIndex: 'upload_score', key: 'upload_score', width: 140, align: 'center',
           onCell: () => {
             return {
               style: {
                 maxWidth: 140,
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
-                textOverflow:'ellipsis',
-                cursor:'pointer'
+                textOverflow: 'ellipsis',
+                cursor: 'pointer'
               }
             }
           },
           ellipsis: true,
         },
-        {title: '教案格式规范性（10%）', dataIndex: 'format_score', key: 'format_score', width: 140, align: 'center',
+        {
+          title: '教案格式规范性（10%）', dataIndex: 'format_score', key: 'format_score', width: 140, align: 'center',
           onCell: () => {
             return {
               style: {
                 maxWidth: 140,
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
-                textOverflow:'ellipsis',
-                cursor:'pointer'
+                textOverflow: 'ellipsis',
+                cursor: 'pointer'
               }
             }
           },
           ellipsis: true,
         },
-        {title: '教学内容完整性（40%）', dataIndex: 'complete_score', key: 'complete_score', width: 140, align: 'center',
+        {
+          title: '教学内容完整性（40%）', dataIndex: 'complete_score', key: 'complete_score', width: 140, align: 'center',
           onCell: () => {
             return {
               style: {
                 maxWidth: 140,
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
-                textOverflow:'ellipsis',
-                cursor:'pointer'
+                textOverflow: 'ellipsis',
+                cursor: 'pointer'
               }
             }
           },
           ellipsis: true,
         },
-        {title: '教学设计科学性（40%）', dataIndex: 'design_score', key: 'design_score', width: 140, align: 'center',
+        {
+          title: '教学设计科学性（40%）', dataIndex: 'design_score', key: 'design_score', width: 140, align: 'center',
           onCell: () => {
             return {
               style: {
                 maxWidth: 140,
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
-                textOverflow:'ellipsis',
-                cursor:'pointer'
+                textOverflow: 'ellipsis',
+                cursor: 'pointer'
               }
             }
           },
@@ -329,8 +337,8 @@
         proxy.$api.get(
             '/getTEvaluationItem',
             {},
-            {'id':parseInt(key)},
-            (success)=>{
+            {'id': parseInt(key)},
+            (success) => {
               itemData.value.splice(0, itemData.value.length)
               for (let i in success.data.data) {
                 let id = success.data.data[i].id
@@ -338,7 +346,7 @@
                 itemData.value.push(success.data.data[i])
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
@@ -363,55 +371,65 @@
           }
         }
       }
+      /*计算总分*/
       const calcTotalScore = () => {
         totalScore.value = uploadScore.value + formatScore.value + completeScore.value + designScore.value
       }
+      /*确认修改*/
       const handleModifyOk = () => {
-       proxy.$api.get(
-           '/updTEvaluationItem',
-           {},
-           {'id':parseInt(_key.value),'upload_score':uploadScore.value,'format_score':formatScore.value,'complete_score':completeScore.value,'design_score':designScore.value,'total_score':totalScore.value},
-           (success)=>{
-             if (success.data.error === 0){
-               for (let i = 0; i < itemData.value.length; i++) {
-                 if (itemData.value[i].key === _key.value) {
-                   itemData.value[i].upload_score = uploadScore.value
-                   itemData.value[i].format_score = formatScore.value
-                   itemData.value[i].complete_score = completeScore.value
-                   itemData.value[i].design_score = designScore.value
-                   itemData.value[i].total_score = totalScore.value
-                 }
-               }
-               showModify.value = false
-               message.success('修改成功')
-             }else{
-               message.error('修改失败')
-             }
-           },
-           (error)=>{
-
-           }
-       )
-      }
-
-      const itemConfirm = (key: string) => {
         proxy.$api.get(
-            '/delTEvaluationItem',
+            '/updTEvaluationItem',
             {},
-            {'id':parseInt(key)},
-            (success)=>{
-              if (success.data.error === 0){
-                itemData.value = itemData.value.filter(item => item.key != key)
-                message.success('删除成功')
+            {
+              'id': parseInt(_key.value),
+              'upload_score': uploadScore.value,
+              'format_score': formatScore.value,
+              'complete_score': completeScore.value,
+              'design_score': designScore.value,
+              'total_score': totalScore.value
+            },
+            (success) => {
+              if (success.data.error === 0) {
+                for (let i = 0; i < itemData.value.length; i++) {
+                  if (itemData.value[i].key === _key.value) {
+                    itemData.value[i].upload_score = uploadScore.value
+                    itemData.value[i].format_score = formatScore.value
+                    itemData.value[i].complete_score = completeScore.value
+                    itemData.value[i].design_score = designScore.value
+                    itemData.value[i].total_score = totalScore.value
+                  }
+                }
+                showModify.value = false
+                message.success('修改成功')
+              } else {
+                message.error('修改失败')
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
       }
-      const handleExport = computed(()=>(id)=>{
-        return 'http://119.29.185.52:9001/exportTEvaluation?id='+parseInt(id);
+      /*子项删除*/
+      const itemConfirm = (key: string) => {
+        proxy.$api.get(
+            '/delTEvaluationItem',
+            {},
+            {'id': parseInt(key)},
+            (success) => {
+              if (success.data.error === 0) {
+                itemData.value = itemData.value.filter(item => item.key != key)
+                message.success('删除成功')
+              }
+            },
+            (error) => {
+
+            }
+        )
+      }
+      /*导出*/
+      const handleExport = computed(() => (id) => {
+        return 'http://119.29.185.52:9001/exportTEvaluation?id=' + parseInt(id);
       })
       //获取选择的教研室
       const selDepartment = ref('')
@@ -427,14 +445,14 @@
         proxy.$api.get(
             '/delTEvaluation',
             {},
-            {'id':parseInt(key)},
-            (success)=>{
+            {'id': parseInt(key)},
+            (success) => {
               if (success.data.error === 0) {
                 sData.value.splice(0, sData.value.length)
                 for (let i in success.data.data) {
                   let id = success.data.data[i].id
                   success.data.data[i].key = id.toString()
-                  success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                  success.data.data[i].created_at = success.data.data[i].created_at.slice(0, 10)
                   sData.value.push(success.data.data[i])
                 }
                 message.success('删除成功')
@@ -442,7 +460,7 @@
                 message.success('删除失败')
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
@@ -475,18 +493,18 @@
         proxy.$api.get(
             '/addTEvaluation',
             {},
-            {'staff_id':parseInt(curSelValue.value)},
-            (success)=>{
+            {'staff_id': parseInt(curSelValue.value)},
+            (success) => {
               sData.value.splice(0, sData.value.length)
               for (let i in success.data.data) {
                 let id = success.data.data[i].id
                 success.data.data[i].key = id.toString()
-                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0, 10)
                 sData.value.push(success.data.data[i])
               }
               message.success('添加成功')
             },
-            (error)=>{
+            (error) => {
 
             }
         )
@@ -530,7 +548,7 @@
 </script>
 
 <style>
-  .ant-spin-container .ant-table-fixed-left .ant-table-tbody > tr{
+  .ant-spin-container .ant-table-fixed-left .ant-table-tbody > tr {
     height: 107px !important;
   }
 </style>

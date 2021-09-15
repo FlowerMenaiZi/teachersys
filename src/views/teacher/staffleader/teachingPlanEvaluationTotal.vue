@@ -1,3 +1,6 @@
+<!--
+教案测评汇总
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
@@ -186,6 +189,7 @@ export default defineComponent({
         slots: {customRender: 'operation'},
       },
     ];
+    //获取数据
     const {proxy}:any = getCurrentInstance()
     onMounted(()=>{
       proxy.$api.get(
@@ -223,6 +227,7 @@ export default defineComponent({
     const itemData:any = ref([])
     const showSee = ref(false)
     const _key = ref()
+    //点击查看
     const handleSee = (key: string) => {
       proxy.$api.get(
           '/getTEvaluationItem',
@@ -245,7 +250,7 @@ export default defineComponent({
     const handleSeeOk = () => {
       showSee.value = false
     }
-    //弹出按钮
+    //导出按钮
     const handleExport = computed(()=>(id)=>{
       return 'http://119.29.185.52:9001/exportTEvaluation?id='+parseInt(id);
     })
@@ -290,9 +295,7 @@ export default defineComponent({
           }
       )
     }
-
-
-
+    //子项删除按钮
     const itemConfirmDel = (key: string) => {
       proxy.$api.get(
           '/delTEvaluationItem',
@@ -318,6 +321,7 @@ export default defineComponent({
     const designScore = ref('')
     const totalScore = ref('')
     const showModify = ref(false)
+    //点击修改
     const handleModify = (key: string) => {
       _key.value = key
       //显示弹出层
@@ -332,9 +336,11 @@ export default defineComponent({
       }
       showModify.value = true
     }
+    //计算总分
     const calcTotalScore = () => {
       totalScore.value = uploadScore.value + formatScore.value + completeScore.value + designScore.value
     }
+    //确认修改
     const handleModifyOk = () => {
       proxy.$api.get(
           '/updTEvaluationItem',

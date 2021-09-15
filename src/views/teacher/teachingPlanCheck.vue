@@ -1,3 +1,6 @@
+<!--
+个人授课计划
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
@@ -33,7 +36,8 @@
   <a-modal v-model:visible="showAllItem" title="查看授课情况表" @ok="handleSeeOk()" okText="确认" cancelText="取消" width="70%">
     <a-table :columns="columns2" :data-source="itemData" :pagination="pagination">
       <template #operation="{ record }">
-        <a-button type="primary" :style="{margin:'0 10px 10px 0'}" @click="handleModify(record.teaching_plan_check_item_id)">
+        <a-button type="primary" :style="{margin:'0 10px 10px 0'}"
+                  @click="handleModify(record.teaching_plan_check_item_id)">
           修改
         </a-button>
       </template>
@@ -58,10 +62,11 @@
 </template>
 
 <script lang="ts">
-  import {defineComponent, ref, reactive, UnwrapRef, Ref,onMounted,getCurrentInstance} from 'vue';
+  import {defineComponent, ref, reactive, UnwrapRef, Ref, onMounted, getCurrentInstance} from 'vue';
   import {message} from 'ant-design-vue';
   import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue';
   import $store from "../../store/index"
+
   interface TableDataType {
     key: string;
     id: number;
@@ -71,6 +76,7 @@
     teacher_id: number;
     teacher: string;
   }
+
   export default defineComponent({
     name: "teachingPlanCheck",
     components: {
@@ -92,26 +98,24 @@
         searchedColumn: '',
       });
 
-      /*第一个弹出层*/
-      //模拟数据，使用TableDataType接口验证数据
       const sData: Ref<TableDataType[]> = ref([]);
-
-      const {proxy}:any = getCurrentInstance()
-      onMounted(()=>{
+      /*获取数据*/
+      const {proxy}: any = getCurrentInstance()
+      onMounted(() => {
         proxy.$api.get(
             '/teachingPlanItem',
             {},
-            {'id':$store.state.userInfo.id},
-            (success)=>{
+            {'id': $store.state.userInfo.id},
+            (success) => {
               sData.value.splice(0, sData.value.length)
               for (let i in success.data.data) {
                 let id = success.data.data[i].id
                 success.data.data[i].key = id.toString()
-                success.data.data[i].created_at = success.data.data[i].created_at.slice(0,10)
+                success.data.data[i].created_at = success.data.data[i].created_at.slice(0, 10)
                 sData.value.push(success.data.data[i])
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )
@@ -148,9 +152,8 @@
         },
       ];
       const showAllItem = ref(false);
-      /*第二个弹出层*/
       const columns2 = [
-        {title: '课程',  dataIndex: 'name', key: 'name',width: 150},
+        {title: '课程', dataIndex: 'name', key: 'name', width: 150},
         {title: '班级', dataIndex: 'clazz', key: 'clazz', width: 100},
         {
           title: '操作',
@@ -160,13 +163,14 @@
           slots: {customRender: 'operation'},
         },
       ];
-      const itemData:any = ref([])
-      const handleCheck = () =>{
+      const itemData: any = ref([])
+      /*点击查看*/
+      const handleCheck = () => {
         proxy.$api.get(
             '/getTPlanCheckItem',
             {},
-            {'id':$store.state.userInfo.id},
-            (success)=>{
+            {'id': $store.state.userInfo.id},
+            (success) => {
               itemData.value.splice(0, itemData.value.length)
               for (let i in success.data.data) {
                 let id = success.data.data[i].id
@@ -177,12 +181,13 @@
 
               showAllItem.value = true
             },
-            (error)=>{}
+            (error) => {
+            }
         )
       }
 
 
-      const handleSeeOk = () =>{
+      const handleSeeOk = () => {
         showAllItem.value = false
       }
 
@@ -193,7 +198,8 @@
       const actualProgress = ref('')  //实际进度
       const compare = ref('')         //实际与计划比较情况
       const reason = ref('')          //原因
-      const handleModify = (key:number) =>{
+      /*点击修改*/
+      const handleModify = (key: number) => {
         _id.value = key
         for (let i in itemData.value) {
           if (itemData.value[i].teaching_plan_check_item_id === _id.value) {
@@ -205,13 +211,20 @@
         }
         showSetItem.value = true
       }
-      const handleModifyOk = () =>{
+      /*确认修改*/
+      const handleModifyOk = () => {
         console.log(parseInt(_id.value));
         proxy.$api.get(
             '/updTPlanCheckItem',
             {},
-            {id:parseInt(_id.value),'plan_progress':planProgress.value,'actual_progress':actualProgress.value,'compare':compare.value,'reason':reason.value},
-            (success)=>{
+            {
+              id: parseInt(_id.value),
+              'plan_progress': planProgress.value,
+              'actual_progress': actualProgress.value,
+              'compare': compare.value,
+              'reason': reason.value
+            },
+            (success) => {
               if (success.data.error === 0) {
                 for (let i in itemData.value) {
                   if (itemData.value[i].key === _id.value) {
@@ -224,7 +237,7 @@
                 showSetItem.value = false
               }
             },
-            (error)=>{
+            (error) => {
 
             }
         )

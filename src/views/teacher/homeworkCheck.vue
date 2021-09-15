@@ -1,3 +1,6 @@
+<!--
+个人作业检查
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
@@ -98,6 +101,7 @@
       /*第一个弹出层*/
       //模拟数据，使用TableDataType接口验证数据
       const sData: Ref<TableDataType[]> = ref([]);
+      /*获取数据*/
       const {proxy}: any = getCurrentInstance()
       onMounted(() => {
         proxy.$api.get(
@@ -163,6 +167,7 @@
           slots: {customRender: 'operation'},
         },
       ];
+      /*点击查看*/
       const handleCheck = () => {
         proxy.$api.get(
             '/getTHomeCheckItem',
@@ -196,6 +201,7 @@
       const otherHomeworkNumber = ref('')         //其他作业批改次数
       const weeklyClassHour = ref('')             //周课时及实习周数
       const evaluate = ref('')                    //评价
+      /*点击修改*/
       const handleModify = (key: number) => {
         _id.value = key
         for (let i in itemData.value) {
@@ -210,6 +216,7 @@
         }
         showSetItem.value = true
       }
+      /*确认修改*/
       const handleModifyOk = () => {
         proxy.$api.get(
             '/updTHomeCheckItem',

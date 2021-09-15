@@ -1,3 +1,6 @@
+<!--
+教研室管理
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
@@ -95,6 +98,7 @@
 
       const sData: any = ref([]);
       const departmentData: any = ref([]);
+      /*获取数据*/
       const {proxy}: any = getCurrentInstance()
       onMounted(() => {
         proxy.$api.get(

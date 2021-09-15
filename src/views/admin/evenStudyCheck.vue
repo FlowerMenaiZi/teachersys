@@ -1,3 +1,6 @@
+<!--
+晚修检查管理
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
@@ -184,11 +187,11 @@
       const pagination = {
         pageSize: 5
       };
-      //模拟数据，使用TableDataType接口验证数据
       const sData: Ref<TableDataType[]> = ref([]);
       const teachers: any = ref([])
       const allClazz: any = ref([])
       const itemData: any = ref([])
+      /*获取数据*/
       const {proxy}: any = getCurrentInstance()
       onMounted(() => {
         proxy.$api.get(
@@ -374,7 +377,7 @@
       const handleOk = () => {
         showAllItem.value = false
       };
-      //确认删除
+      //晚修项删除
       const confirm = (key: string) => {
         proxy.$api.get(
             '/delEvenCheck',
@@ -390,6 +393,7 @@
         )
       };
 
+      /*每个晚修项里的子删除*/
       const itemConfirm = (key: string) => {
         proxy.$api.get(
             '/delEvenCheckItem',
@@ -407,23 +411,24 @@
 
       const room = ref('') //教室
       const sArriveNumOfPeople = ref('') //应到人数
-      const numOfPeopleStayOut = ref('') //
-      const leave = ref('')
-      const absent = ref('')
-      const studentCadres = ref('')
-      const numOfAssociation = ref('')
-      const actualNumber = ref('')
-      const numOfPeopleNotArrived = ref('')
-      const numberScore = ref('')
-      const clazzDisScore = ref('')
-      const learnAtmScore = ref('')
-      const clazzHygieneScore = ref('')
-      const totalScore = ref('')
-      const evaluate = ref('')
-      const shiftManagerCon = ref('')
-      const teacherOnDutyCon = ref('')
+      const numOfPeopleStayOut = ref('') //外宿人数
+      const leave = ref('') //请假
+      const absent = ref('') //缺席
+      const studentCadres = ref('') //学生干部
+      const numOfAssociation = ref('') //社团人数
+      const actualNumber = ref('') //实到人数
+      const numOfPeopleNotArrived = ref('') //未到人数
+      const numberScore = ref('') //人数得分
+      const clazzDisScore = ref('') //课堂纪律得分
+      const learnAtmScore = ref('') //学习氛围得分
+      const clazzHygieneScore = ref('') //教室卫生得分
+      const totalScore = ref('') //总得分
+      const evaluate = ref('') //评价
+      const shiftManagerCon = ref('')  //班干确认
+      const teacherOnDutyCon = ref('') //值班老师确认
       //设置当前点击的key值为空
       const _key = ref()
+      /*点击修改*/
       const handleModify = (key: string) => {
         for (let i in itemData.value) {
           if (itemData.value[i].key === key) {
@@ -449,11 +454,12 @@
           }
         }
       }
+      /*计算总得分*/
       const calcTotalScore = () => {
         totalScore.value = numberScore.value + clazzDisScore.value + learnAtmScore.value + clazzHygieneScore.value
       }
+      /*确认修改*/
       const handleV3Ok = () => {
-
         proxy.$api.get(
             '/updEvenCheckItem',
             {},
@@ -521,9 +527,11 @@
       const curClazz = ref([])
       const format = 'YYYY-MM-DD'
 
+      /*日期选择*/
       const onDateChange = (value: Moment[], dateString: string) => {
         selTime.value = dateString
       }
+      /*班级选择修改*/
       const selClazzChange: any = ref([])
       const handleClazzChange = (value: string[]) => {
         selClazzChange.value.splice(0, selClazzChange.value.length)
@@ -600,6 +608,7 @@
       //处理添加弹出层的确认事件
       const visibleFour = ref(false)
       const handleExportLink = ref('')
+      /*导出某日*/
       const handleExportOk = () => {
         //判断是否为空
         if (exportDate.value === '') {

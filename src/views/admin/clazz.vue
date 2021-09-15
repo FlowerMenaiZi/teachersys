@@ -1,3 +1,6 @@
+<!--
+班级管理
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination"
            :locale="{filterConfirm:'确定',filterReset: '重置',emptyText: '暂无数据'}">
@@ -110,9 +113,9 @@
       const pagination = {
         pageSize: 5
       };
-      //模拟数据，使用TableDataType接口验证数据
       const sData: Ref<TableDataType[]> = ref([]);
       const departmentData: any = ref([]);
+      /*获取数据*/
       const {proxy}: any = getCurrentInstance();
       onMounted(() => {
         proxy.$api.get(
@@ -398,6 +401,7 @@
         curClazzPass.value = ''
         visibleTwo.value = false;
       }
+      /*导入班级*/
       const upLoadFinal = ({file}) =>{
         if (file.status === 'done') {
           sData.value.splice(0,sData.value.length)

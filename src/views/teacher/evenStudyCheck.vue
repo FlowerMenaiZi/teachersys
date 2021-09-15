@@ -1,3 +1,6 @@
+<!--
+晚修检查记录
+-->
 <template>
   <a-table :columns="columns" :data-source="sData" :pagination="pagination">
     <template #filterDropdown="{ setSelectedKeys, selectedKeys, confirm, clearFilters, column }">
@@ -149,7 +152,7 @@
 </template>
 
 <script lang="ts">
-  import {defineComponent, ref, reactive, UnwrapRef, Ref,onMounted,getCurrentInstance} from 'vue';
+  import {defineComponent, ref, reactive, UnwrapRef, Ref, onMounted, getCurrentInstance} from 'vue';
   import {message} from 'ant-design-vue';
   import {SearchOutlined, CheckOutlined, EditOutlined} from '@ant-design/icons-vue';
   import {Moment} from 'moment';
@@ -163,8 +166,8 @@
     key: string;
     id: number;
     date: string;
-    teacher_id:number;
-    teacher:string;
+    teacher_id: number;
+    teacher: string;
     check_at: string;
   }
 
@@ -188,12 +191,13 @@
       const teachers: any = ref([])
       const allClazz: any = ref([])
       const itemData: any = ref([])
+      /*获取数据*/
       const {proxy}: any = getCurrentInstance()
       onMounted(() => {
         proxy.$api.get(
             '/getTeacherEvenCheck',
             {},
-            {'id':$store.state.userInfo.id},
+            {'id': $store.state.userInfo.id},
             (success) => {
               for (let i in success.data.data) {
                 let id = success.data.data[i].id
@@ -315,6 +319,7 @@
           slots: {customRender: 'operation'},
         },
       ];
+      /*删除记录*/
       const confirmDel = (key: string) => {
         proxy.$api.get(
             '/delEvenCheck',
@@ -329,6 +334,7 @@
             }
         )
       }
+      /*查看详细记录*/
       const handleCheck = (key: string) => {
         showAllItem.value = true
         proxy.$api.get(
@@ -351,8 +357,8 @@
       const handleSeeOk = () => {
         showAllItem.value = false
       }
-      const room = ref('') //教室
-      const sArriveNumOfPeople = ref('') //应到人数
+      const room = ref('')
+      const sArriveNumOfPeople = ref('')
       const numOfPeopleStayOut = ref('')
       const leave = ref('')
       const absent = ref('')
@@ -372,6 +378,7 @@
 
       const showSetItem = ref(false);
       const _key = ref()
+      /*点击修改*/
       const handleModify = (key: string) => {
         _key.value = key
         for (let i in itemData.value) {
@@ -398,11 +405,12 @@
         }
         showSetItem.value = true
       }
+      /*计算总分*/
       const calcTotalScore = () => {
         totalScore.value = numberScore.value + clazzDisScore.value + learnAtmScore.value + clazzHygieneScore.value
       }
-
-      const itemConfirmDel = (key:string) =>{
+      /*子项删除*/
+      const itemConfirmDel = (key: string) => {
         proxy.$api.get(
             '/delEvenCheckItem',
             {},
@@ -417,13 +425,14 @@
       }
 
       const isChecked = ref(false)
+      /*确认修改*/
       const handleModifyOk = () => {
         function getNowFormatDate() {
           var date = new Date();
           var seperator1 = "-";
           var year = date.getFullYear();
-          var month:any = date.getMonth() + 1;
-          var strDate:any = date.getDate();
+          var month: any = date.getMonth() + 1;
+          var strDate: any = date.getDate();
           let hh = new Date().getHours()
           let mf = new Date().getMinutes() < 10 ? '0' + new Date().getMinutes() : new Date().getMinutes()
           let ss = new Date().getSeconds() < 10 ? '0' + new Date().getSeconds() : new Date().getSeconds()
@@ -436,11 +445,12 @@
           var currentdate = year + seperator1 + month + seperator1 + strDate + ' ' + hh + ':' + mf + ':' + ss;
           return currentdate;
         }
+
         let checkDay = ''
-        if (isChecked.value){
-          for (let i in itemData.value){
-            if (itemData.value[i].key === _key.value){
-              checkDay = itemData.value[i].teacher_check_at?itemData.value[i].teacher_check_at:getNowFormatDate()
+        if (isChecked.value) {
+          for (let i in itemData.value) {
+            if (itemData.value[i].key === _key.value) {
+              checkDay = itemData.value[i].teacher_check_at ? itemData.value[i].teacher_check_at : getNowFormatDate()
             }
           }
         }
@@ -506,10 +516,11 @@
       const whichToday = ref('')
       const curClazz = ref([])
       const format = 'YYYY-MM-DD'
-
+      /*选择日期*/
       const onDateChange = (value: Moment[], dateString: string) => {
         selTime.value = dateString
       }
+      /*选择班级*/
       const selClazzChange: any = ref([])
       const handleClazzChange = (value: string[]) => {
         selClazzChange.value.splice(0, selClazzChange.value.length)
@@ -525,7 +536,8 @@
         curClazz.value = []
         visibleTwo.value = true
       }
-      const handleAddOk = () =>{
+      /*添加晚修记录项*/
+      const handleAddOk = () => {
         if (selTime.value === '') {
           message.error('请选择日期')
           return false
@@ -545,7 +557,7 @@
         if (selClazzChange.value === '') {
           message.error('请选择至少一个班级')
           return false
-        }else{
+        } else {
           allClazz.value = selClazzChange.value
         }
         proxy.$api.get(
@@ -557,7 +569,7 @@
               'day': parseInt(whichToday.value),
               'teacher': parseInt(curTeacherName.value),
               'clazz': selClazzChange.value,
-              'ident':'teacher',
+              'ident': 'teacher',
             },
             (success) => {
               sData.value.splice(0, sData.value.length)
@@ -574,13 +586,14 @@
             }
         )
       }
-      const sureCheck = (key:string)=>{
+      /*确认检查*/
+      const sureCheck = (key: string) => {
         function getNowFormatDate() {
           var date = new Date();
           var seperator1 = "-";
           var year = date.getFullYear();
-          var month:any = date.getMonth() + 1;
-          var strDate:any = date.getDate();
+          var month: any = date.getMonth() + 1;
+          var strDate: any = date.getDate();
           let hh = new Date().getHours()
           let mf = new Date().getMinutes() < 10 ? '0' + new Date().getMinutes() : new Date().getMinutes()
           let ss = new Date().getSeconds() < 10 ? '0' + new Date().getSeconds() : new Date().getSeconds()
@@ -593,24 +606,26 @@
           var currentdate = year + seperator1 + month + seperator1 + strDate + ' ' + hh + ':' + mf + ':' + ss;
           return currentdate;
         }
+
         let checkDay = ''
-        for (let i in sData.value){
-          if (sData.value[i].key === key){
-            checkDay = sData.value[i].check_at?sData.value[i].check_at:getNowFormatDate()
+        for (let i in sData.value) {
+          if (sData.value[i].key === key) {
+            checkDay = sData.value[i].check_at ? sData.value[i].check_at : getNowFormatDate()
           }
         }
         proxy.$api.get(
             '/checkEvenStudy',
             {},
-            {'id':parseInt(key),'check_at':checkDay},
-            (success)=>{
-              for (let i in sData.value){
-                if (sData.value[i].key === key){
+            {'id': parseInt(key), 'check_at': checkDay},
+            (success) => {
+              for (let i in sData.value) {
+                if (sData.value[i].key === key) {
                   sData.value[i].check_at = checkDay
                 }
               }
             },
-            (error)=>{}
+            (error) => {
+            }
         )
       }
       return {
